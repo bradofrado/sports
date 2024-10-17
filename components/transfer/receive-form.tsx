@@ -13,11 +13,15 @@ import {
 } from '../ui/card'
 import { Label } from '../ui/label'
 import { Input } from '../ui/input'
+import { useQueryState } from '@/hooks/query-state'
 
 export const ReceiveForm: React.FunctionComponent<{
   downloadTicket: typeof downloadTicket
 }> = ({ downloadTicket }) => {
-  const [receiveCode, setReceiveCode] = useState('')
+  const [receiveCode, setReceiveCode] = useQueryState({
+    key: 'code',
+    defaultValue: '',
+  })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -45,7 +49,7 @@ export const ReceiveForm: React.FunctionComponent<{
       <CardContent className='space-y-2'>
         <div className='space-y-1'>
           <Label htmlFor='code'>Receive Code</Label>
-          <Input id='code' onChange={setReceiveCode} />
+          <Input id='code' onChange={setReceiveCode} value={receiveCode} />
         </div>
         {error ? <p className='text-red-500 text-sm'>{error}</p> : null}
       </CardContent>

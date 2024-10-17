@@ -21,14 +21,21 @@ import {
   SelectValue,
 } from '../ui/select'
 import { GameInfo, games } from '@/lib/season-info'
+import { useQueryState } from '@/hooks/query-state'
 
 export const SendForm: React.FunctionComponent<{
   generateReceiveCode: typeof generateReceiveCode
 }> = ({ generateReceiveCode }) => {
-  const [token, setToken] = useState('')
-  const [sendCode, setSendCode] = useState('')
+  const [token, setToken] = useQueryState({ key: 'token', defaultValue: '' })
+  const [sendCode, setSendCode] = useQueryState({
+    key: 'code',
+    defaultValue: '',
+  })
   const [error, setError] = useState('')
-  const [selectedGame, setSelectedGame] = useState<GameInfo | null>(null)
+  const [selectedGame, setSelectedGame] = useQueryState<GameInfo | null>({
+    key: 'game',
+    defaultValue: null,
+  })
 
   const onSend = async () => {
     if (!token || !selectedGame) return
@@ -100,7 +107,10 @@ export const SendForm: React.FunctionComponent<{
         </div>
         <div className='space-y-1'>
           <Label>Game</Label>
-          <Select onValueChange={onGameSelect}>
+          <Select
+            onValueChange={onGameSelect}
+            value={`${selectedGame?.seasonId}-${selectedGame?.gameId}`}
+          >
             <SelectTrigger>
               <SelectValue placeholder='Select a game' />
             </SelectTrigger>
@@ -117,17 +127,6 @@ export const SendForm: React.FunctionComponent<{
           </Select>
         </div>
       </CardContent>
-      {sendCode ? (
-        <CardContent>
-          <div className='space-y-1 flex flex-col'>
-            <Label>Your receive code:</Label>
-            <p className='text-sm text-gray-600'>
-              Give this code to the recipient.
-            </p>
-            <CopyText className='w-fit' text={sendCode} />
-          </div>
-        </CardContent>
-      ) : null}
       {error ? (
         <CardContent>
           <p className='text-red-500 text-sm'>{error}</p>
@@ -138,6 +137,26 @@ export const SendForm: React.FunctionComponent<{
           Send
         </Button>
       </CardFooter>
+      {sendCode ? (
+        <CardContent>
+          <div className='space-y-1 flex flex-col'>
+            <Label>Your receive code:</Label>
+            <p className='text-sm text-gray-600'>
+              Give this code to the recipient.
+            </p>
+            <CopyText className='w-fit' text={sendCode} />
+            <p className='text-sm text-gray-600'>Or send them this link.</p>
+            <CopyText
+              className='w-full'
+              text={constructReceiveLink(sendCode)}
+            />
+          </div>
+        </CardContent>
+      ) : null}
     </>
   )
+}
+
+const constructReceiveLink = (code: string): string => {
+  return `https://tickets.braydonjones.com/?tab=receive&code=${code}`
 }

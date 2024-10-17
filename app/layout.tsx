@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import localFont from 'next/font/local'
 import './globals.css'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { QueryStateProvider } from '@/hooks/query-state'
 
 const geistSans = localFont({
   src: './fonts/GeistVF.woff',
@@ -26,13 +27,15 @@ export default function RootLayout({
 }>) {
   return (
     <TooltipProvider>
-      <html lang='en'>
-        <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        >
-          {children}
-        </body>
-      </html>
+      <QueryStateProvider>
+        <html lang='en'>
+          <body
+            className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+          >
+            {children}
+          </body>
+        </html>
+      </QueryStateProvider>
     </TooltipProvider>
   )
 }

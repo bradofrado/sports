@@ -6,17 +6,18 @@ import { ReceiveForm } from './receive-form'
 export const TransferForm: React.FunctionComponent<{
   generateReceiveCode: typeof generateReceiveCode
   downloadTicket: typeof downloadTicket
-}> = ({ generateReceiveCode, downloadTicket }) => {
+  tabValue: string
+}> = ({ generateReceiveCode, downloadTicket, tabValue }) => {
   return (
-    <Tabs defaultValue='account' className='max-w-[400px]'>
+    <Tabs defaultValue={tabValue} className='max-w-[400px]'>
       <TabsList className='grid w-full grid-cols-2'>
-        <TabsTrigger value='account'>Send</TabsTrigger>
-        <TabsTrigger value='password'>Receive</TabsTrigger>
+        <TabsTrigger value='send'>Send</TabsTrigger>
+        <TabsTrigger value='receive'>Receive</TabsTrigger>
       </TabsList>
-      <TabsContent value='account'>
+      <TabsContent value='send'>
         <SendForm generateReceiveCode={generateReceiveCode} />
       </TabsContent>
-      <TabsContent value='password'>
+      <TabsContent value='receive'>
         <ReceiveForm downloadTicket={downloadTicket} />
       </TabsContent>
     </Tabs>
