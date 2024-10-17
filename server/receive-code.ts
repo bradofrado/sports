@@ -10,7 +10,12 @@ export const generateReceiveCode = async (
   authToken: string,
   game: GameInfo
 ): Promise<string> => {
-  const alreadyGenerated = sendCodes.find((sc) => sc.authToken === authToken)
+  const alreadyGenerated = sendCodes.find(
+    (sc) =>
+      sc.authToken === authToken &&
+      sc.game.gameId === game.gameId &&
+      sc.game.seasonId === game.seasonId
+  )
   if (alreadyGenerated) return alreadyGenerated.sendCode
 
   const sendCode = Math.random().toString(36).substring(2, 8)

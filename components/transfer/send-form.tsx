@@ -134,7 +134,7 @@ export const SendForm: React.FunctionComponent<{
       ) : null}
       <CardFooter>
         <Button onClick={onSend} disabled={!token || !selectedGame}>
-          Send
+          Generate Code
         </Button>
       </CardFooter>
       {sendCode ? (
