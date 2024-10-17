@@ -3,6 +3,7 @@ import { encodeState, decodeState } from '@/lib/utils'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
   createContext,
+  Suspense,
   useCallback,
   useContext,
   useEffect,
@@ -74,7 +75,7 @@ const QueryStateContext = createContext<QueryStateContextType>({
   deleteSearchParam: () => undefined,
 })
 
-export const QueryStateProvider: React.FC<{ children: React.ReactNode }> = ({
+const QueryStateProviderRaw: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const urlRef = useRef(
@@ -143,5 +144,13 @@ export const QueryStateProvider: React.FC<{ children: React.ReactNode }> = ({
     >
       {children}
     </QueryStateContext.Provider>
+  )
+}
+
+export const QueryStateProvider: typeof QueryStateProviderRaw = (props) => {
+  return (
+    <Suspense>
+      <QueryStateProviderRaw {...props} />
+    </Suspense>
   )
 }
