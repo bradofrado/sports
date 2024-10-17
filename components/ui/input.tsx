@@ -2,10 +2,21 @@ import * as React from 'react'
 
 import { cn } from '@/lib/utils'
 
-export type InputProps = React.InputHTMLAttributes<HTMLInputElement>
+export type InputProps = Omit<
+  React.InputHTMLAttributes<HTMLInputElement>,
+  'onChange'
+> & {
+  onChange: (value: string) => void
+}
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, ...props }, ref) => {
+  ({ className, type, onChange, ...props }, ref) => {
+    const formattedChange =
+      (onChange: (value: string) => void) =>
+      (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value
+        onChange(value)
+      }
     return (
       <input
         type={type}
@@ -14,6 +25,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           className
         )}
         ref={ref}
+        onChange={formattedChange(onChange)}
         {...props}
       />
     )

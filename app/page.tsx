@@ -1,5 +1,5 @@
 import { downloadTicket, generateReceiveCode } from './actions'
-import { TransferForm } from './transfer-form'
+import { TransferForm } from '../components/transfer/transfer-form'
 
 export default function Home() {
   return (

@@ -1,17 +1,20 @@
+import { GameInfo } from '@/lib/season-info'
+
 const globalThisForApp = globalThis as unknown as {
-  sendCodes: { authToken: string; sendCode: string }[]
+  sendCodes: { authToken: string; sendCode: string; game: GameInfo }[]
 }
 const sendCodes = globalThisForApp.sendCodes ?? []
 if (!globalThisForApp.sendCodes) globalThisForApp.sendCodes = sendCodes
 
 export const generateReceiveCode = async (
-  authToken: string
+  authToken: string,
+  game: GameInfo
 ): Promise<string> => {
   const alreadyGenerated = sendCodes.find((sc) => sc.authToken === authToken)
   if (alreadyGenerated) return alreadyGenerated.sendCode
 
   const sendCode = Math.random().toString(36).substring(2, 8)
-  sendCodes.push({ authToken, sendCode })
+  sendCodes.push({ authToken, sendCode, game })
   return sendCode
 }
 
@@ -21,14 +24,14 @@ export const downloadTicket = async (code: string): Promise<string> => {
     throw new Error('Invalid code')
   }
 
-  return getDownloadUrl(sentCode.authToken)
+  return getDownloadUrl(sentCode.authToken, sentCode.game)
 }
 
-async function getDownloadUrl(authToken: string) {
+async function getDownloadUrl(authToken: string, game: GameInfo) {
   const headers = { 'pac-authz': authToken }
   async function events() {
     const response = await fetch(
-      'https://byutickets.evenue.net/pac-api/orderhistory-event/F24/E03',
+      `https://byutickets.evenue.net/pac-api/orderhistory-event/${game.seasonId}/${game.gameId}`,
       { headers }
     )
     const json = await response.json()
@@ -55,21 +58,21 @@ async function getDownloadUrl(authToken: string) {
   async function createRequest() {
     const eventStuff = await events()
     const accountStuff = await accounts()
-    const u = { ...eventStuff, ...accountStuff }
+    const rawRequest = { ...eventStuff, ...accountStuff }
 
     return {
       ticketInfo: {
-        season: u.seasonCd,
-        event: u.eventCd,
+        season: rawRequest.seasonCd,
+        event: rawRequest.eventCd,
         seat: {
-          level: u.transferSeatId.split('^')[2].split(':')[0],
-          section: u.transferSeatId.split('^')[2].split(':')[1],
-          row: u.transferSeatId.split('^')[3],
-          seat: u.transferSeatId.split('^')[4],
+          level: rawRequest.transferSeatId.split('^')[2].split(':')[0],
+          section: rawRequest.transferSeatId.split('^')[2].split(':')[1],
+          row: rawRequest.transferSeatId.split('^')[3],
+          seat: rawRequest.transferSeatId.split('^')[4],
         },
-        patronId: u.patronId,
-        dataAccountId: u.dataAccountId,
-        barcode: u.barcode,
+        patronId: rawRequest.patronId,
+        dataAccountId: rawRequest.dataAccountId,
+        barcode: rawRequest.barcode,
         generateVas: true,
         passType: 'apple',
       },
