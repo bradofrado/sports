@@ -65,7 +65,30 @@ const SendForm: React.FunctionComponent<{
       </CardHeader>
       <CardContent className='space-y-2'>
         <div className='space-y-1'>
-          <Label htmlFor='token'>pac-authz token</Label>
+          <Label
+            htmlFor='token'
+            tooltip={
+              <div className='max-w-80 flex flex-col gap-2'>
+                <p>
+                  Paste the following code into the console of your logged in
+                  <a
+                    className='text-blue-500'
+                    href='https://byutickets.evenue.net'
+                    target='_blank'
+                  >
+                    https://byutickets.evenue.net
+                  </a>{' '}
+                  tab:
+                </p>
+                <CopyText
+                  className='w-full'
+                  text='document.cookie.split(";").find(t=>t.includes("pac-authz")).split("=")[1]'
+                />
+              </div>
+            }
+          >
+            pac-authz token
+          </Label>
           <Input
             id='token'
             placeholder='abcde-1234-5678-fghij'
@@ -80,7 +103,7 @@ const SendForm: React.FunctionComponent<{
             <p className='text-sm text-gray-600'>
               Give this code to the recipient.
             </p>
-            <CopyText text={sendCode} />
+            <CopyText className='w-fit' text={sendCode} />
           </div>
         </CardContent>
       ) : null}
@@ -101,14 +124,19 @@ const ReceiveForm: React.FunctionComponent<{
 }> = ({ downloadTicket }) => {
   const [receiveCode, setReceiveCode] = useState('')
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   const onDownload = async () => {
+    if (!receiveCode) return
+    setLoading(true)
     try {
       const code = await downloadTicket(receiveCode)
       downloadURI(code, 'Apple Wallet Ticket')
     } catch (err) {
       console.error(err)
       setError('There was an error downloading the ticket')
+    } finally {
+      setLoading(false)
     }
   }
   return (
@@ -127,7 +155,9 @@ const ReceiveForm: React.FunctionComponent<{
         {error ? <p className='text-red-500 text-sm'>{error}</p> : null}
       </CardContent>
       <CardFooter>
-        <Button onClick={onDownload}>Download Ticket</Button>
+        <Button onClick={onDownload} loading={loading}>
+          Download Ticket
+        </Button>
       </CardFooter>
     </>
   )

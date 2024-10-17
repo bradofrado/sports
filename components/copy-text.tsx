@@ -5,10 +5,10 @@ import { useState, useEffect } from 'react'
 
 interface CopyTextProps {
   text: string
-  widthClass?: string
+  className?: string
 }
 export const CopyText: React.FunctionComponent<CopyTextProps> = ({
-  widthClass,
+  className,
   text,
 }) => {
   const [copied, setCopied] = useState(false)
@@ -18,41 +18,56 @@ export const CopyText: React.FunctionComponent<CopyTextProps> = ({
       setCopied(false)
     }
   }, [text, copiedText])
+
+  const copyText = () => {
+    void navigator.clipboard.writeText(text)
+    setCopied(true)
+    setCopiedText(text)
+  }
   return (
-    <div
+    <button
+      type='button'
       className={cn(
-        'rounded h-6 leading-6 cursor-pointer px-1 inline-block transition whitespace-nowrap overflow-hidden text-ellipsis',
-        // copied
-        //   ? 'text-white bg-primary'
-        //   :
-        'text-teal-900 bg-gray-200 hover:bg-gray-300'
+        '[--is-toggle-tooltip:false] hs-tooltip relative py-1.5 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-mono rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50 focus:outline-none focus:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none dark:bg-neutral-900 dark:border-neutral-700 dark:text-white dark:hover:bg-neutral-800 dark:focus:bg-neutral-800',
+        className
       )}
-      onClick={() => {
-        void navigator.clipboard.writeText(text)
-        setCopied(true)
-        setCopiedText(text)
-      }}
+      onClick={copyText}
     >
-      <div className='flex items-center'>
-        <svg
-          fill='none'
-          stroke='currentColor'
-          strokeLinecap='round'
-          strokeLinejoin='round'
-          strokeWidth='2'
-          viewBox='0 0 24 24'
-          className='w-5 h-5 mr-1'
-        >
-          <path
-            d={
-              copied
-                ? 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4'
-                : 'M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3'
-            }
-          ></path>
-        </svg>
-        <span className={widthClass}>{text}</span>
-      </div>
-    </div>
+      <span className='overflow-hidden whitespace-nowrap'>{text}</span>
+      <span className='border-s ps-3.5 dark:border-neutral-700'>
+        {!copied ? (
+          <svg
+            className='size-4 group-hover:rotate-6 transition'
+            xmlns='http://www.w3.org/2000/svg'
+            width='24'
+            height='24'
+            viewBox='0 0 24 24'
+            fill='none'
+            stroke='currentColor'
+            stroke-width='2'
+            stroke-linecap='round'
+            stroke-linejoin='round'
+          >
+            <rect width='8' height='4' x='8' y='2' rx='1' ry='1'></rect>
+            <path d='M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2'></path>
+          </svg>
+        ) : (
+          <svg
+            className='size-4 text-blue-600 rotate-6'
+            xmlns='http://www.w3.org/2000/svg'
+            width='24'
+            height='24'
+            viewBox='0 0 24 24'
+            fill='none'
+            stroke='currentColor'
+            stroke-width='2'
+            stroke-linecap='round'
+            stroke-linejoin='round'
+          >
+            <polyline points='20 6 9 17 4 12'></polyline>
+          </svg>
+        )}
+      </span>
+    </button>
   )
 }
