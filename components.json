@@ -1,13 +1,14 @@
 {
-  "$schema": "https://ui.shadcn.com/schema.json",
+  "$schema": "https://raw.githubusercontent.com/bradofrado/component-registry/refs/heads/master/public/schema.json",
   "style": "new-york",
   "rsc": true,
   "tsx": true,
+  "registry": "https://raw.githubusercontent.com/bradofrado/component-registry/refs/heads/master",
   "tailwind": {
     "config": "tailwind.config.ts",
     "css": "app/globals.css",
-    "baseColor": "gray",
-    "cssVariables": false,
+    "baseColor": "neutral",
+    "cssVariables": true,
     "prefix": ""
   },
   "aliases": {
