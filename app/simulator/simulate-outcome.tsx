@@ -18,6 +18,7 @@ export const SimulateOutcome: React.FunctionComponent<{
     key: 'simulations',
     defaultValue: [],
   })
+  const [, setTeamId] = useQueryState<number | undefined>({ key: 'drawer' })
   const location = game.school.id === school.id ? 'vs' : '@'
   const opponent = game.school.id === school.id ? game.opponent : game.school
   const result = calculateStatus(game, school)
@@ -67,9 +68,9 @@ export const SimulateOutcome: React.FunctionComponent<{
           : ''
       )}
     >
-      <div>
+      <Button variant='link' onClick={() => setTeamId(opponent.id)}>
         {location} {opponent.title}
-      </div>
+      </Button>
       <div className='flex gap-2'>
         <Button
           variant={result === 'W' ? 'default' : 'outline'}

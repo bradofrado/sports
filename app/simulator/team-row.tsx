@@ -13,7 +13,11 @@ export const TeamRow: React.FunctionComponent<{
     router.push(url.toString())
   }
   return (
-    <TableRow key={school.id} onClick={() => onTeamClick(school)}>
+    <TableRow
+      className='hover:cursor-pointer'
+      key={school.id}
+      onClick={() => onTeamClick(school)}
+    >
       <TableCell>{school.title}</TableCell>
       <TableCell>
         {school.overallRecord.wins}-{school.overallRecord.losses} (

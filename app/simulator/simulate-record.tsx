@@ -14,8 +14,14 @@ export const SimulateRecord: React.FunctionComponent<{
   })
   return (
     <div className='p-4'>
-      <h1 className='text-center text-4xl'>{team.title}</h1>
-      <div className='flex flex-col gap-2'>
+      <div className='flex justify-center items-center gap-2'>
+        <h1 className='text-center text-4xl'>{team.title}</h1>{' '}
+        <span>
+          {team.overallRecord.wins}-{team.overallRecord.losses} (
+          {team.record.wins}-{team.record.losses})
+        </span>
+      </div>
+      <div className='flex flex-col gap-2 mt-2'>
         {games.map((game) => (
           <SimulateOutcome key={game.id} game={game} school={team} />
         ))}
