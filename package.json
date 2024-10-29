@@ -68,8 +68,10 @@
     "eslint": "^8",
     "eslint-config-next": "14.2.15",
     "harmonycn": "^0.1.4",
+    "jsdom": "^25.0.1",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^2.1.4"
   }
 }
