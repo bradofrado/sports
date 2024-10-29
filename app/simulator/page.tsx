@@ -1,82 +1,77 @@
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { getStandings } from '../actions'
 import { CenterLayout } from '../center-layout'
+import { TeamRow } from './team-row'
+import { SimulateDrawer } from './simulate-drawer'
+import { z } from 'zod'
+import { Suspense } from 'react'
+import { SimulateRecord } from './simulate-record'
+import { simulationGameSchema } from '@/lib/games-info'
+import { Button } from '@/components/ui/button'
 
-export default async function SimulatorPage() {
-  const schools = await getStandings()
+const jsonSchema = z
+  .string()
+  .refine((value) => {
+    try {
+      JSON.parse(value)
+      return true
+    } catch {
+      return false
+    }
+  })
+  .transform((value) => JSON.parse(value))
+
+export default async function SimulatorPage({
+  searchParams,
+}: {
+  searchParams?: { drawer?: string; simulations?: string }
+}) {
+  const simulations =
+    z
+      .array(simulationGameSchema)
+      .optional()
+      .parse(jsonSchema.optional().parse(searchParams?.simulations)) ?? []
+  const teamId = z.coerce.number().optional().parse(searchParams?.drawer)
+  const schools = await getStandings(simulations)
+
   return (
     <CenterLayout>
-      <h1 className='text-center text-4xl'>BIG XII Simulator</h1>
-      {schools.map((school) => (
-        <div key={school.id}>
-          <p>
-            {school.title} ({school.overallRecord.wins}-
-            {school.overallRecord.losses}) ({school.record.wins}-
-            {school.record.losses})
-          </p>
-        </div>
-      ))}
+      <div className='w-full max-w-2xl'>
+        <h1 className='text-center text-4xl'>BIG XII Simulator</h1>
+        {simulations.length > 0 ? (
+          <Button>
+            <a href='/simulator'>Reset</a>
+          </Button>
+        ) : null}
+        <Table>
+          <TableCaption>BIG XII STANDINGS</TableCaption>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Team</TableHead>
+              <TableHead>Record</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {schools.map((school) => (
+              <TeamRow key={school.id} school={school} />
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+      <SimulateDrawer>
+        <Suspense>
+          {teamId ? (
+            <SimulateRecord teamId={teamId} simulations={simulations} />
+          ) : undefined}
+        </Suspense>
+      </SimulateDrawer>
     </CenterLayout>
   )
 }
-
-//Teams:
-// BYU Cougars
-// ISU
-// Iowa State Cyclones
-// KSU
-// Kansas State Wildcats
-// Colorado Buffaloes
-// TCU Horned Frogs
-// Texas Tech Red Raiders
-// Cincinnati Bearcats
-// West Virginia Mountaineers
-// Arizona State Sun Devils
-// Baylor Bears
-// Houston Cougars
-// Arizona Wildcats
-// Utah Utes
-// UCF Knights
-// Kansas Jayhawks
-// Oklahoma State Cowboys
-// const teams: FootballTeam[] = [
-//   { id: 'BYU', name: 'BYU Cougars' },
-//   { id: 'ISU', name: 'Iowa State Cyclones' },
-//   { id: 'KSU', name: 'Kansas State Wildcats' },
-//   { id: 'CU', name: 'Colorado Buffaloes' },
-//   { id: 'TCU', name: 'TCU Horned Frogs' },
-//   { id: 'TTU', name: 'Texas Tech Red Raiders' },
-//   { id: 'CIN', name: 'Cincinnati Bearcats' },
-//   { id: 'WVU', name: 'West Virginia Mountaineers' },
-//   { id: 'ASU', name: 'Arizona State Sun Devils' },
-//   { id: 'BU', name: 'Baylor Bears' },
-//   { id: 'UH', name: 'Houston Cougars' },
-//   { id: 'AZ', name: 'Arizona Wildcats' },
-//   { id: 'UTAH', name: 'Utah Utes' },
-//   { id: 'UCF', name: 'UCF Knights' },
-//   { id: 'KU', name: 'Kansas Jayhawks' },
-//   { id: 'OSU', name: 'Oklahoma State Cowboys' },
-// ]
-
-// interface FootballMatch {
-//   home: FootballTeam
-//   away: FootballTeam
-//   date: Date
-//   result?: FootballMatchResult
-// }
-
-// interface FootballMatchResult {
-//   home: number
-//   away: number
-//   winner: FootballTeam
-// }
-
-// interface FootballTeam {
-//   id: string
-//   name: string
-// }
-
-// interface FootballRecord {
-//   team: FootballTeam
-//   wins: number
-//   losses: number
-// }

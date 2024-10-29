@@ -1,3 +1,5 @@
+import { z } from 'zod'
+
 interface BigXiiSchoolRaw {
   preview: {
     title: string
@@ -163,6 +165,12 @@ export interface SchoolRecord {
   wins: number
   losses: number
 }
+
+export const simulationGameSchema = z.object({
+  gameId: z.number(),
+  result: z.union([z.literal('W'), z.literal('L')]),
+})
+export type SimulationGame = z.infer<typeof simulationGameSchema>
 
 export const allGames: BigXiiGameRaw[] = [
   {

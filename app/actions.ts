@@ -5,6 +5,7 @@ import {
   BigXiiGame,
   BigXiiSchool,
   BigXiiSchoolWithGames,
+  SimulationGame,
 } from '@/lib/games-info'
 import { getStandings as getStandingsRaw } from '@/lib/standings/get-standings'
 import { calculateRecord } from '@/lib/standings/utils'
@@ -23,16 +24,24 @@ export const downloadTicket: typeof downloadTicketServer = async (...props) => {
   return downloadTicketServer(...props)
 }
 
-// export const getAllGames = async (): Promise<BigXiiGame[]> => {
-//   return allGames
-// }
-
-export const getStandings = async (): Promise<BigXiiSchoolWithGames[]> => {
-  const schools = await getBigXiiSchools()
+export const getStandings = async (
+  simulations: SimulationGame[]
+): Promise<BigXiiSchoolWithGames[]> => {
+  const schools = await getBigXiiSchools(simulations)
   return getStandingsRaw(schools)
 }
 
-const getBigXiiSchools = async (): Promise<BigXiiSchoolWithGames[]> => {
+export const getTeam = async (
+  teamId: number,
+  simulations: SimulationGame[]
+): Promise<BigXiiSchoolWithGames | undefined> => {
+  const schools = await getBigXiiSchools(simulations)
+  return schools.find((school) => school.id === teamId)
+}
+
+const getBigXiiSchools = async (
+  simulations: SimulationGame[]
+): Promise<BigXiiSchoolWithGames[]> => {
   const games = allGames
   const schools = new Map<number, BigXiiSchool>()
   games.forEach((game) => {
@@ -69,11 +78,14 @@ const getBigXiiSchools = async (): Promise<BigXiiSchoolWithGames[]> => {
     const opponent = allSchools.find((school) => school.id === game.opponent.id)
     if (!school || !opponent) throw new Error("Schools weren't found")
 
+    const simulationGame = simulations.find((sim) => sim.gameId === game.id)
+    const result = simulationGame?.result ?? game.result?.status ?? ''
+
     const gameWithSchool: BigXiiGame = {
       ...game,
       school,
       opponent,
-      result: game.result?.status ?? '',
+      result,
     }
     school.allGames.push(gameWithSchool)
     opponent.allGames.push(gameWithSchool)

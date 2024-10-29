@@ -15,12 +15,7 @@ export const calculateRecord = (
   games.forEach((game) => {
     if (!game.result) return
 
-    const status =
-      game.school.id === school.id
-        ? game.result
-        : game.result === 'W'
-        ? 'L'
-        : 'W'
+    const status = calculateStatus(game, school)
     if (status === 'W') {
       wins++
     } else if (status === 'L') {
@@ -29,6 +24,14 @@ export const calculateRecord = (
   })
 
   return { wins, losses }
+}
+
+export const calculateStatus = (game: BigXiiGame, school: BigXiiSchool) => {
+  if (!game.result) return ''
+  const status =
+    game.school.id === school.id ? game.result : game.result === 'W' ? 'L' : 'W'
+
+  return status
 }
 
 export const calculateWinPercentage = (
