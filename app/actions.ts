@@ -1,13 +1,13 @@
 'use server'
 
 import {
-  allGames,
   BigXiiGame,
   BigXiiSchool,
   BigXiiSchoolWithGames,
   SimulationGame,
 } from '@/lib/games-info'
 import { getStandings as getStandingsRaw } from '@/lib/standings/get-standings'
+import { getTeams } from '@/lib/standings/get-teams'
 import { calculateRecord } from '@/lib/standings/utils'
 import {
   generateReceiveCode as generateReceiveCodeServer,
@@ -42,7 +42,7 @@ export const getTeam = async (
 const getBigXiiSchools = async (
   simulations: SimulationGame[]
 ): Promise<BigXiiSchoolWithGames[]> => {
-  const games = allGames
+  const games = await getTeams()
   const schools = new Map<number, BigXiiSchool>()
   games.forEach((game) => {
     let school = schools.get(game.school.id)

@@ -50,7 +50,7 @@ interface BigXiiSchoolRaw {
   games?: Map<number, BigXiiGameRaw>
 }
 
-interface BigXiiGameRaw {
+export interface BigXiiGameRaw {
   id: number
   date: string
   end_date: string | null
