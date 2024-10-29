@@ -20,10 +20,10 @@ export const SimulateDrawer: React.FunctionComponent<{
         if (!open) setOpen(undefined)
       }}
     >
-      <DrawerContent className='h-screen top-0 right-0 left-auto !mt-0 w-[500px] rounded-none'>
+      <DrawerContent className='h-screen top-0 right-0 left-auto !mt-0 max-w-[500px] w-auto lg:w-[500px] rounded-none overflow-auto'>
         {children}
         <DrawerFooter>
-          <DrawerClose>
+          <DrawerClose asChild>
             <Button className='w-full' variant='outline'>
               Close
             </Button>
