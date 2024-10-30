@@ -33,7 +33,7 @@ export const ReceiveForm: React.FunctionComponent<{
       downloadURI(code, 'Apple Wallet Ticket')
     } catch (err) {
       console.error(err)
-      setError('There was an error downloading the ticket')
+      setError(String(err))
     } finally {
       setLoading(false)
     }

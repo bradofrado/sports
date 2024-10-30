@@ -24,22 +24,39 @@ export const generateReceiveCode = async (
 }
 
 export const downloadTicket = async (code: string): Promise<string> => {
-  const sentCode = sendCodes.find((sc) => sc.sendCode === code)
-  if (!sentCode) {
-    throw new Error('Invalid code')
-  }
+  try {
+    const sentCode = sendCodes.find((sc) => sc.sendCode === code)
+    if (!sentCode) {
+      throw new Error('Invalid code')
+    }
 
-  return getDownloadUrl(sentCode.authToken, sentCode.game)
+    return getDownloadUrl(sentCode.authToken, sentCode.game)
+  } catch (err) {
+    console.error(err)
+    throw err
+  }
 }
 
 async function getDownloadUrl(authToken: string, game: GameInfo) {
-  const headers = { 'pac-authz': authToken }
+  const headers = {
+    'pac-authz': authToken,
+    'User-Agent':
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+  }
+  const makeFetch = async (url: string) => {
+    const response = await fetch(url, { headers })
+    if (!response.ok) {
+      const text = await response.text()
+      console.error(text)
+      throw new Error('Bot detected :(')
+    }
+
+    return response.json()
+  }
   async function events() {
-    const response = await fetch(
-      `https://byutickets.evenue.net/pac-api/orderhistory-event/${game.seasonId}/${game.gameId}`,
-      { headers }
+    const json = await makeFetch(
+      `https://byutickets.evenue.net/pac-api/orderhistory-event/${game.seasonId}/${game.gameId}`
     )
-    const json = await response.json()
     return {
       seasonCd: json.events[0].seasonCd,
       eventCd: json.events[0].eventCd,
@@ -49,11 +66,9 @@ async function getDownloadUrl(authToken: string, game: GameInfo) {
   }
 
   async function accounts() {
-    const response = await fetch(
-      'https://byutickets.evenue.net/pac-api/accounts',
-      { headers }
+    const json = await makeFetch(
+      'https://byutickets.evenue.net/pac-api/accounts'
     )
-    const json = await response.json()
     return {
       patronId: json.key.id,
       dataAccountId: json.dataAccountId,
@@ -93,6 +108,9 @@ async function getDownloadUrl(authToken: string, game: GameInfo) {
         headers: { ...headers, 'Content-Type': 'application/json' },
       }
     )
+    if (!response.ok) {
+      throw new Error(await response.text())
+    }
     const json = await response.json()
     return json.applePassUrl
   }

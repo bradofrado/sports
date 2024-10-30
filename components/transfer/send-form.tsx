@@ -51,7 +51,7 @@ export const SendForm: React.FunctionComponent<{
     } catch (err) {
       console.error(err)
       setSendCode('')
-      setError('There was an error sending the ticket')
+      setError(String(err))
     }
   }
 
