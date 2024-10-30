@@ -235,5 +235,5 @@ export const analyticRankingsTiebreaker: Tiebreaker = () => {
 */
 export const coinTossTiebreaker: Tiebreaker = () => {
   //Randomly return 1 or -1
-  return Math.random() > 0.5 ? 1 : -1
+  return Math.random() > 0.5 ? 1 : 0
 }
