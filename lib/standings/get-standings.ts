@@ -1,46 +1,46 @@
 import { BigXiiSchoolWithGames } from '../games-info'
-import {
-  Tiebreaker,
-  recordPercentageTiebreaker,
-  headToHeadTiebreaker,
-  winPercentageTiebreaker,
-  winPercentageAgainstTopTiebreaker,
-  combinedWinPercentageTiebreaker,
-  totalNumberOfWinsTiebreaker,
-  analyticRankingsTiebreaker,
-  coinTossTiebreaker,
-} from './tiebreakers'
+import { multiTeamTiebreaker, twoTeamTiebreaker } from './tiebreakers'
+import { groupTiedTeams, sortRecordPercentage, TiebreakerGroup } from './utils'
 
-export const getStandings = async (
+export const getStandings = (
   schools: BigXiiSchoolWithGames[]
-): Promise<BigXiiSchoolWithGames[]> => {
-  const tiebreakers: Tiebreaker[] = [
-    recordPercentageTiebreaker,
-    headToHeadTiebreaker,
-    winPercentageTiebreaker,
-    winPercentageAgainstTopTiebreaker,
-    combinedWinPercentageTiebreaker,
-    totalNumberOfWinsTiebreaker,
-    analyticRankingsTiebreaker,
-    coinTossTiebreaker,
-  ]
+): BigXiiSchoolWithGames[] => {
+  let recordSorted = schools.slice().sort(sortRecordPercentage)
+  const tiedTeams = groupTiedTeams(recordSorted)
 
-  for (let i = 0; i < tiebreakers.length; i++) {
-    const currTiebreakers = tiebreakers.slice(0, i + 1)
-    let wasChanged = false
-    schools = schools.slice().sort((a, b) => {
-      for (const tiebreaker of currTiebreakers) {
-        const res = tiebreaker(a, b, schools)
-        if (res !== 0) {
-          wasChanged = true
-          return res
-        }
+  const twoTeamBreaker = twoTeamTiebreaker(recordSorted)
+  const multiTeamBreaker = multiTeamTiebreaker(recordSorted)
+  for (const group of tiedTeams) {
+    if (group.teams.length === 1) continue
+
+    if (group.teams.length === 2) {
+      group.teams.sort(twoTeamBreaker)
+    } else {
+      const newGroups = multiTeamBreaker(group.teams)
+      if (newGroups.length === 1) {
+        group.teams = newGroups[0].teams
+      } else {
+        const sortedGroups = newGroups.map((group) => ({
+          teams: getStandings(group.teams),
+          index: group.index,
+        }))
+        sortedGroups.forEach((sortedGroup) => {
+          group.teams = reinsertTiedGroup(sortedGroup, group.teams)
+        })
       }
+    }
 
-      return 0
-    })
-    if (!wasChanged) break
+    recordSorted = reinsertTiedGroup(group, recordSorted)
   }
 
-  return schools
+  return recordSorted
 }
+
+const reinsertTiedGroup = (
+  group: TiebreakerGroup,
+  sorted: BigXiiSchoolWithGames[]
+) =>
+  sorted
+    .slice(0, group.index)
+    .concat(group.teams)
+    .concat(sorted.slice(group.index + group.teams.length))

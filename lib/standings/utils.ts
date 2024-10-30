@@ -45,6 +45,16 @@ export const calculateWinPercentage = (
   return wins / (wins + losses)
 }
 
+export const calculateWinPercentageAgainstTeams = (
+  team: BigXiiSchoolWithGames,
+  opponents: BigXiiSchoolWithGames[]
+): number => {
+  const commonGames = opponents.map((opponent) => team.games.get(opponent.id))
+  if (commonGames.includes(undefined)) return -1
+
+  return calculateWinPercentage(team, commonGames as BigXiiGame[])
+}
+
 export const recordPercentage = (record: SchoolRecord): number => {
   return record.wins / (record.wins + record.losses)
 }
@@ -58,23 +68,67 @@ export const getSchoolGames = (
   )
 }
 
-export const commonGamePercentage = (
+export const commonGamesPercentage = (
   a: BigXiiSchoolWithGames,
-  b: BigXiiSchoolWithGames
+  b: BigXiiSchoolWithGames[]
 ): number => {
   const commonGamesA = Array.from(a.games.entries())
     .filter(
       ([opponentId, game]) =>
-        b.games?.has(opponentId) &&
+        b.every((g) => g.games?.has(opponentId)) &&
         game.result &&
-        b.games.get(opponentId)?.result
+        b.every((g) => g.games.get(opponentId)?.result)
     )
     .map(([, game]) => game)
 
   if (commonGamesA.length === 0) {
-    return 0
+    return -1 //No common games
   }
 
   const aWinPercentage = calculateWinPercentage(a, commonGamesA)
   return aWinPercentage
+}
+
+export const sortRecordPercentage = (
+  a: BigXiiSchoolWithGames,
+  b: BigXiiSchoolWithGames
+): number => {
+  const aPercentage = recordPercentage(a.record)
+  const bPercentage = recordPercentage(b.record)
+
+  return bPercentage - aPercentage
+}
+
+export interface TiebreakerGroup {
+  teams: BigXiiSchoolWithGames[]
+  index: number
+}
+export const groupTiedTeams = (
+  schools: BigXiiSchoolWithGames[],
+  relativeRecord?: number[]
+): TiebreakerGroup[] => {
+  const groups: { teams: BigXiiSchoolWithGames[]; index: number }[] = []
+  let currGroup: BigXiiSchoolWithGames[] = []
+  let currIndex = 0
+
+  if (relativeRecord === undefined) {
+    relativeRecord = schools.map((school) => recordPercentage(school.record))
+  }
+
+  for (let i = 0; i < schools.length; i++) {
+    const school = schools[i]
+    const prevSchool = schools[i - 1]
+
+    if (prevSchool && relativeRecord[i] !== relativeRecord[i - 1]) {
+      groups.push({ teams: currGroup, index: currIndex })
+      currGroup = []
+      currIndex = i
+    }
+
+    currGroup.push(school)
+  }
+
+  groups.push({ teams: currGroup, index: currIndex })
+
+  return groups
 }

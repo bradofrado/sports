@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest'
 import {
   combinedWinPercentageTiebreaker,
   headToHeadTiebreaker,
-  recordPercentageTiebreaker,
   Tiebreaker,
   winPercentageTiebreaker,
 } from './tiebreakers'
 import { BigXiiGame, BigXiiSchoolWithGames } from '../games-info'
+import { sortRecordPercentage } from './utils'
 
 describe('tiebreakers', () => {
   const expectStanding = (
@@ -19,7 +19,7 @@ describe('tiebreakers', () => {
     const resultStr = `[${sorted.map((school) => school.title).join(', ')}]`
     expect(resultStr).toBe(expected)
   }
-  describe('recordPercentageTiebreaker', () => {
+  describe('sortRecordPercentage', () => {
     it('should sort better percentage first', () => {
       const school1: BigXiiSchoolWithGames = {
         id: 1,
@@ -38,16 +38,12 @@ describe('tiebreakers', () => {
         record: { wins: 5, losses: 0 },
       }
 
-      expectStanding(
-        [school1, school2],
-        recordPercentageTiebreaker,
-        '[BYU, Baylor]'
-      )
+      expectStanding([school1, school2], sortRecordPercentage, '[BYU, Baylor]')
     })
   })
 
   describe('headToHeadTiebreaker', () => {
-    it('Should sort better head to head first', () => {
+    it('Should sort better head to head first for away team win', () => {
       const school1: BigXiiSchoolWithGames = {
         id: 1,
         title: 'Baylor',
@@ -70,6 +66,37 @@ describe('tiebreakers', () => {
         opponent: school2,
         is_conference: true,
         result: 'L',
+        date: '',
+      }
+      school1.games.set(school2.id, game)
+      school2.games.set(school1.id, game)
+
+      expectStanding([school1, school2], headToHeadTiebreaker, '[BYU, Baylor]')
+    })
+
+    it('Should sort better head to head first for home team win', () => {
+      const school1: BigXiiSchoolWithGames = {
+        id: 1,
+        title: 'Baylor',
+        games: new Map(),
+        allGames: [],
+        overallRecord: { wins: 5, losses: 2 },
+        record: { wins: 4, losses: 1 },
+      }
+      const school2: BigXiiSchoolWithGames = {
+        id: 2,
+        title: 'BYU',
+        games: new Map(),
+        allGames: [],
+        overallRecord: { wins: 7, losses: 0 },
+        record: { wins: 5, losses: 0 },
+      }
+      const game: BigXiiGame = {
+        id: 1,
+        school: school2,
+        opponent: school1,
+        is_conference: true,
+        result: 'W',
         date: '',
       }
       school1.games.set(school2.id, game)
