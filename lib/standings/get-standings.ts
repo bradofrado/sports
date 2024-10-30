@@ -13,9 +13,11 @@ export const getStandings = (
   for (const group of tiedTeams) {
     if (group.teams.length === 1) continue
 
+    // Sort the two team groups
     if (group.teams.length === 2) {
       group.teams.sort(twoTeamBreaker)
     } else {
+      //
       const newGroups = multiTeamBreaker(group.teams)
       if (newGroups.length === 1) {
         group.teams = newGroups[0].teams

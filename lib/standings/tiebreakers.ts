@@ -1,9 +1,7 @@
 import { BigXiiSchoolWithGames } from '../games-info'
 import {
-  recordPercentage,
   commonGamesPercentage,
   calculateWinPercentage,
-  calculateStatus,
   calculateWinPercentageAgainstTeams,
   groupTiedTeams,
   TiebreakerGroup,
@@ -56,7 +54,7 @@ export const multiTeamTiebreaker =
       coinTossTiebreaker,
     ]
 
-    let currTeams = tiedTeams.slice()
+    const currTeams = tiedTeams.slice()
     for (const tiebreaker of tiebreakers) {
       const results = currTeams.map((team) =>
         tiebreaker(team, getOthers(team), teams)

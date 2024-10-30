@@ -6,7 +6,6 @@ import {
   winPercentageTiebreaker,
 } from './tiebreakers'
 import { BigXiiGame, BigXiiSchoolWithGames } from '../games-info'
-import { sortRecordPercentage } from './utils'
 
 describe('tiebreakers', () => {
   const expectStanding = (
@@ -14,33 +13,19 @@ describe('tiebreakers', () => {
     tiebreaker: Tiebreaker,
     expected: string
   ) => {
-    const sorted = schools.slice().sort((a, b) => tiebreaker(a, b, schools))
+    const getOthers = (team: BigXiiSchoolWithGames) =>
+      schools.filter((t) => t.id !== team.id)
+
+    const results = schools.map((school) =>
+      tiebreaker(school, getOthers(school), schools)
+    )
+    const sorted = schools
+      .slice()
+      .sort((a, b) => results[schools.indexOf(b)] - results[schools.indexOf(a)])
 
     const resultStr = `[${sorted.map((school) => school.title).join(', ')}]`
     expect(resultStr).toBe(expected)
   }
-  describe('sortRecordPercentage', () => {
-    it('should sort better percentage first', () => {
-      const school1: BigXiiSchoolWithGames = {
-        id: 1,
-        title: 'Baylor',
-        games: new Map(),
-        allGames: [],
-        overallRecord: { wins: 5, losses: 2 },
-        record: { wins: 4, losses: 1 },
-      }
-      const school2: BigXiiSchoolWithGames = {
-        id: 2,
-        title: 'BYU',
-        games: new Map(),
-        allGames: [],
-        overallRecord: { wins: 7, losses: 0 },
-        record: { wins: 5, losses: 0 },
-      }
-
-      expectStanding([school1, school2], sortRecordPercentage, '[BYU, Baylor]')
-    })
-  })
 
   describe('headToHeadTiebreaker', () => {
     it('Should sort better head to head first for away team win', () => {
