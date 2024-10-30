@@ -17,18 +17,14 @@ export const getStandings = (
     if (group.teams.length === 2) {
       group.teams.sort(twoTeamBreaker)
     } else {
-      //
-      const newGroups = multiTeamBreaker(group.teams)
-      if (newGroups.length === 1) {
-        group.teams = newGroups[0].teams
+      // The multi team tie breaker goes until we get an advantage team
+      // when this happens, we redo the tie breaker with the rest of the teams
+      const { advantage, rest } = multiTeamBreaker(group.teams)
+      const restSorted = getStandings(rest)
+      if (advantage) {
+        group.teams = [advantage, ...restSorted]
       } else {
-        const sortedGroups = newGroups.map((group) => ({
-          teams: getStandings(group.teams),
-          index: group.index,
-        }))
-        sortedGroups.forEach((sortedGroup) => {
-          group.teams = reinsertTiedGroup(sortedGroup, group.teams)
-        })
+        group.teams = restSorted
       }
     }
 

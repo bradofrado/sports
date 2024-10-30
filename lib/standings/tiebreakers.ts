@@ -4,7 +4,6 @@ import {
   calculateWinPercentage,
   calculateWinPercentageAgainstTeams,
   groupTiedTeams,
-  TiebreakerGroup,
 } from './utils'
 
 export type Tiebreaker = (
@@ -37,9 +36,19 @@ export const twoTeamTiebreaker =
     return 0
   }
 
+/*
+  In the event of a tie between more than two teams, the following procedures will be used.
+  After one team has an advantage and is “seeded”, all remaining teams in the multipleteam tiebreaker will repeat the tie-breaking procedure. If at any point the multiple-team tie
+  is reduced to two teams, the two-team tie-breaking procedure will be applied.
+*/
 export const multiTeamTiebreaker =
   (teams: BigXiiSchoolWithGames[]) =>
-  (tiedTeams: BigXiiSchoolWithGames[]): TiebreakerGroup[] => {
+  (
+    tiedTeams: BigXiiSchoolWithGames[]
+  ): {
+    advantage: BigXiiSchoolWithGames | undefined
+    rest: BigXiiSchoolWithGames[]
+  } => {
     const getOthers = (team: BigXiiSchoolWithGames) => {
       return tiedTeams.filter((tiedTeam) => tiedTeam.id !== team.id)
     }
@@ -66,15 +75,10 @@ export const multiTeamTiebreaker =
           )
           if (defeatOtherTeamsIndex !== -1) {
             const defeatOtherTeams = currTeams[defeatOtherTeamsIndex]
-            return [
-              { teams: [defeatOtherTeams], index: 0 },
-              {
-                teams: currTeams.filter(
-                  (team) => team.id !== defeatOtherTeams.id
-                ),
-                index: 1,
-              },
-            ]
+            return {
+              advantage: defeatOtherTeams,
+              rest: currTeams.filter((team) => team.id !== defeatOtherTeams.id),
+            }
           }
         }
       } else {
@@ -85,11 +89,19 @@ export const multiTeamTiebreaker =
         results.sort((a, b) => b - a)
 
         const newGroups = groupTiedTeams(currTeams, results)
-        if (newGroups.length !== 1) return newGroups
+        // If we get a lone winner at the top, that means we have an advantage team
+        //and can return the rest of the teams
+        if (newGroups.length > 1 && newGroups[0].teams.length === 1)
+          return {
+            advantage: newGroups[0].teams[0],
+            rest: newGroups.slice(1).flatMap((group) => group.teams),
+          }
       }
     }
 
-    return [{ teams: currTeams, index: 0 }]
+    //If we get here, that means the coin toss tiebreaker did not determine a winner,
+    //so let's just do it again, which will give us another coin toss scenario
+    return { rest: currTeams, advantage: undefined }
   }
 
 /*
