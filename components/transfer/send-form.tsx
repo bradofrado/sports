@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../ui/select'
-import { GameInfo, games } from '@/lib/season-info'
+import { GameInfo, sports } from '@/lib/season-info'
 import { useQueryState } from '@/hooks/query-state'
 
 export const SendForm: React.FunctionComponent<{
@@ -32,10 +32,16 @@ export const SendForm: React.FunctionComponent<{
     defaultValue: '',
   })
   const [error, setError] = useState('')
+  const [selectedSport, setSelectedSport] = useQueryState<string | null>({
+    key: 'sport',
+    defaultValue: null,
+  })
   const [selectedGame, setSelectedGame] = useQueryState<GameInfo | null>({
     key: 'game',
     defaultValue: null,
   })
+
+  const games = sports.find((sport) => sport.sportId === selectedSport)?.games
 
   const onSend = async () => {
     if (!token || !selectedGame) return
@@ -50,6 +56,8 @@ export const SendForm: React.FunctionComponent<{
   }
 
   const onGameSelect = (id: string) => {
+    if (!games) return
+
     const [seasonId, gameId] = id.split('-')
     const game = games.find(
       (game) => game.gameId === gameId && game.seasonId === seasonId
@@ -106,26 +114,46 @@ export const SendForm: React.FunctionComponent<{
           />
         </div>
         <div className='space-y-1'>
-          <Label>Game</Label>
+          <Label>Sport</Label>
           <Select
-            onValueChange={onGameSelect}
-            value={`${selectedGame?.seasonId}-${selectedGame?.gameId}`}
+            onValueChange={setSelectedSport}
+            value={selectedSport ?? undefined}
           >
             <SelectTrigger>
-              <SelectValue placeholder='Select a game' />
+              <SelectValue placeholder='Select a sport' />
             </SelectTrigger>
             <SelectContent>
-              {games.map((game) => (
-                <SelectItem
-                  key={game.gameId}
-                  value={`${game.seasonId}-${game.gameId}`}
-                >
-                  {game.name}
+              {sports.map((sport) => (
+                <SelectItem key={sport.sportId} value={sport.sportId}>
+                  {sport.title}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
+        {games ? (
+          <div className='space-y-1'>
+            <Label>Game</Label>
+            <Select
+              onValueChange={onGameSelect}
+              value={`${selectedGame?.seasonId}-${selectedGame?.gameId}`}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder='Select a game' />
+              </SelectTrigger>
+              <SelectContent>
+                {games.map((game) => (
+                  <SelectItem
+                    key={game.gameId}
+                    value={`${game.seasonId}-${game.gameId}`}
+                  >
+                    {game.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : null}
       </CardContent>
       {error ? (
         <CardContent>
