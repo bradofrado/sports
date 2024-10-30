@@ -8,10 +8,12 @@ export const getStandings = (
   let recordSorted = schools.slice().sort(sortRecordPercentage)
   const tiedTeams = groupTiedTeams(recordSorted)
 
-  const twoTeamBreaker = twoTeamTiebreaker(recordSorted)
-  const multiTeamBreaker = multiTeamTiebreaker(recordSorted)
-  for (const group of tiedTeams) {
+  for (let i = 0; i < tiedTeams.length; i++) {
+    let group = tiedTeams[i]
     if (group.teams.length === 1) continue
+
+    const twoTeamBreaker = twoTeamTiebreaker(tiedTeams)
+    const multiTeamBreaker = multiTeamTiebreaker(tiedTeams)
 
     // Sort the two team groups
     if (group.teams.length === 2) {
@@ -20,15 +22,26 @@ export const getStandings = (
       // The multi team tie breaker goes until we get an advantage team
       // when this happens, we redo the tie breaker with the rest of the teams
       const { advantage, rest } = multiTeamBreaker(group.teams)
-      const restSorted = getStandings(rest)
+
       if (advantage) {
-        group.teams = [advantage, ...restSorted]
+        tiedTeams[i] = { teams: [advantage, ...rest], index: group.index }
+        group = tiedTeams[i]
+        tiedTeams.splice(i + 1, 0, { teams: rest, index: group.index + 1 })
       } else {
-        group.teams = restSorted
+        //Continue until we have an advantage team (the coin toss plays out)
+        i--
+        continue
       }
     }
 
     recordSorted = reinsertTiedGroup(group, recordSorted)
+    // Update the amount of teams in group to make sure it is consistent
+    if (i < tiedTeams.length - 1) {
+      tiedTeams[i].teams = group.teams.slice(
+        0,
+        tiedTeams[i + 1].index - group.index
+      )
+    }
   }
 
   return recordSorted

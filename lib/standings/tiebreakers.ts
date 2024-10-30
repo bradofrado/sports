@@ -4,16 +4,17 @@ import {
   calculateWinPercentage,
   calculateWinPercentageAgainstTeams,
   groupTiedTeams,
+  TiebreakerGroup,
 } from './utils'
 
 export type Tiebreaker = (
   a: BigXiiSchoolWithGames,
   b: BigXiiSchoolWithGames[],
-  currentStandings: BigXiiSchoolWithGames[]
+  groups: TiebreakerGroup[]
 ) => number
 
 export const twoTeamTiebreaker =
-  (schools: BigXiiSchoolWithGames[]) =>
+  (groups: TiebreakerGroup[]) =>
   (a: BigXiiSchoolWithGames, b: BigXiiSchoolWithGames): number => {
     const tiebreakers: Tiebreaker[] = [
       headToHeadTiebreaker,
@@ -26,8 +27,8 @@ export const twoTeamTiebreaker =
     ]
 
     for (const tiebreaker of tiebreakers) {
-      const resultA = tiebreaker(a, [b], schools)
-      const resultB = tiebreaker(b, [a], schools)
+      const resultA = tiebreaker(a, [b], groups)
+      const resultB = tiebreaker(b, [a], groups)
       if (resultA === -1 || resultB === -1 || resultA === resultB) continue
 
       return resultB - resultA
@@ -42,7 +43,7 @@ export const twoTeamTiebreaker =
   is reduced to two teams, the two-team tie-breaking procedure will be applied.
 */
 export const multiTeamTiebreaker =
-  (teams: BigXiiSchoolWithGames[]) =>
+  (groups: TiebreakerGroup[]) =>
   (
     tiedTeams: BigXiiSchoolWithGames[]
   ): {
@@ -66,7 +67,7 @@ export const multiTeamTiebreaker =
     const currTeams = tiedTeams.slice()
     for (const tiebreaker of tiebreakers) {
       const results = currTeams.map((team) =>
-        tiebreaker(team, getOthers(team), teams)
+        tiebreaker(team, getOthers(team), groups)
       )
       if (results.includes(-1)) {
         if (tiebreaker === headToHeadTiebreaker) {
@@ -135,18 +136,21 @@ export const winPercentageTiebreaker: Tiebreaker = (a, b) => {
 export const winPercentageAgainstTopTiebreaker: Tiebreaker = (
   a,
   b,
-  schools
+  tiedGroups
 ) => {
-  const tiedGroups = groupTiedTeams(schools)
+  const schools = tiedGroups.flatMap((group) => group.teams)
 
   const positionA = schools.findIndex((school) => school.id === a.id)
   const positionBs = b.map((b) =>
     schools.findIndex((school) => school.id === b.id)
   )
-  const positionB = Math.max(...positionBs)
-  let currIndex = (positionA > positionB ? positionA : positionB) + 1
+  let currIndex = 0
 
   while (currIndex < schools.length) {
+    if (currIndex === positionA || positionBs.includes(currIndex)) {
+      currIndex++
+      continue
+    }
     // Compare records against tied teams as a group
     const nextTeams = tiedGroups.find(
       (group) =>
@@ -162,7 +166,7 @@ export const winPercentageAgainstTopTiebreaker: Tiebreaker = (
       calculateWinPercentageAgainstTeams(b, nextTeams)
     )
 
-    //Must be common opponents and must have a different win percentage
+    //Must be common opponents
     if (
       positionACommonWinPercentage === -1 ||
       positionBCommonWinPercentages.includes(-1)
