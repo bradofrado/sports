@@ -6,6 +6,7 @@ import {
   winPercentageTiebreaker,
 } from './tiebreakers'
 import { BigXiiGame, BigXiiSchoolWithGames } from '../games-info'
+import { groupTiedTeams } from './utils'
 
 describe('tiebreakers', () => {
   const expectStanding = (
@@ -17,7 +18,7 @@ describe('tiebreakers', () => {
       schools.filter((t) => t.id !== team.id)
 
     const results = schools.map((school) =>
-      tiebreaker(school, getOthers(school), schools)
+      tiebreaker(school, getOthers(school), groupTiedTeams(schools))
     )
     const sorted = schools
       .slice()
@@ -239,8 +240,6 @@ describe('tiebreakers', () => {
       )
     })
   })
-
-  describe('winPercentageAgainstTopTiebreaker', () => {})
 
   describe('combinedWinPercentageTiebreaker', () => {
     it('Should sort better combined win percentage first', () => {
