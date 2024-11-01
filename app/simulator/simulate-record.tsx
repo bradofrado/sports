@@ -13,7 +13,7 @@ export const SimulateRecord: React.FunctionComponent<{
     return new Date(a.date).getTime() - new Date(b.date).getTime()
   })
   return (
-    <div className='p-4'>
+    <div className='p-4 overflow-auto'>
       <div className='flex justify-center items-center gap-2'>
         <h1 className='text-center text-4xl'>{team.title}</h1>{' '}
         <span>

@@ -20,7 +20,7 @@ export const SimulateDrawer: React.FunctionComponent<{
         if (!open) setOpen(undefined)
       }}
     >
-      <DrawerContent className='h-screen top-0 right-0 left-auto !mt-0 max-w-[500px] w-auto lg:w-[500px] rounded-none overflow-auto'>
+      <DrawerContent className='h-screen top-0 right-0 left-auto !mt-0 max-w-[500px] w-auto lg:w-[500px] rounded-none'>
         {children}
         <DrawerFooter>
           <DrawerClose asChild>
