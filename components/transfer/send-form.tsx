@@ -186,5 +186,5 @@ export const SendForm: React.FunctionComponent<{
 }
 
 const constructReceiveLink = (code: string): string => {
-  return `https://sports.braydonjones.com/?tab=receive&code=${code}`
+  return `https://sports.braydonjones.com/tickets?tab=receive&code=${code}`
 }
