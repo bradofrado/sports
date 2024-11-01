@@ -1,9 +1,13 @@
-import { BigXiiSchoolWithGames, SimulationGame } from '../games-info'
+import {
+  BigXiiGameRaw,
+  BigXiiSchoolWithGames,
+  SimulationGame,
+} from '../games-info'
 import { getStandings } from './get-standings'
 import { getBigXiiSchools, getGames } from './get-teams'
 import { reverseResult } from './utils'
 
-export const runSimulation = async (
+export const runNumContendersSimulation = async (
   //BYU is coded as 32 for now
   teamHopeful: number,
   numContenders: number
@@ -13,27 +17,100 @@ export const runSimulation = async (
   const futureGames = games.filter((game) => game.result === null)
   const currStandings = await getStandings(await getBigXiiSchools(games, []))
 
+  const teamsToContend = [
+    ...currStandings.slice(0, numContenders),
+  ].map<TeamPermutations>((school) => ({
+    school,
+    permutations: generateMaxWinLossPermutations({
+      futureGames,
+      school,
+      result: 'L',
+      numResult: maxLosses,
+    }),
+  }))
+  const { gameResults, teamSimulations } = await runSimulations(teamsToContend)
+
+  logHopefulResults({ teamHopeful, gameResults, teamSimulations, maxLosses })
+}
+
+export const runBYU1LossScenario = async () => {
+  const games = await getGames()
+  const futureGames = games.filter((game) => game.result === null)
+  const currStandings = await getStandings(await getBigXiiSchools(games, []))
+
+  const byu = currStandings.find((school) => school.title === 'BYU')
+  const kansasSt = currStandings.find(
+    (school) => school.title === 'Kansas State'
+  )
+  const westVirginia = currStandings.find(
+    (school) => school.title === 'West Virginia'
+  )
+  const TCU = currStandings.find((school) => school.title === 'TCU')
+
+  if (!byu || !kansasSt || !westVirginia || !TCU)
+    throw new Error('School not found')
+
+  const teamPermutations: TeamPermutations[] = [
+    {
+      school: byu,
+      //At most 1 loss
+      permutations: generateMaxWinLossPermutations({
+        school: byu,
+        futureGames,
+        result: 'L',
+        numResult: 1,
+      }),
+    },
+    {
+      school: kansasSt,
+      //At most 2 losses
+      permutations: generateMaxWinLossPermutations({
+        school: kansasSt,
+        futureGames,
+        result: 'L',
+        numResult: 2,
+      }),
+    },
+    ...[westVirginia, TCU].map((school) => ({
+      school,
+      //At most 6 wins
+      permutations: generateMaxWinLossPermutations({
+        school,
+        futureGames,
+        result: 'W',
+        numResult: 6,
+      }),
+    })),
+  ]
+  const { gameResults } = await runSimulations(teamPermutations)
+  logStats(gameResults, 32)
+}
+
+interface TeamPermutations {
+  school: BigXiiSchoolWithGames
+  permutations: string[]
+}
+export const runSimulations = async (teamPermutations: TeamPermutations[]) => {
+  const games = await getGames()
+  const futureGames = games.filter((game) => game.result === null)
+  const currStandings = await getStandings(await getBigXiiSchools(games, []))
+
   let teamSimulations: SimulationGame[][] = []
   const addTeamSimulations = ({
     team,
-    maxLosses,
     includeOppositeVariant = true,
+    permutations,
   }: {
     team: BigXiiSchoolWithGames
-    maxLosses: number
+    permutations: string[]
     includeOppositeVariant?: boolean
   }) => {
     const currSimulations: SimulationGame[][] = []
     const futureGamesForTeam = futureGames.filter(
       (game) => game.school.id === team.id || game.opponent.id === team.id
     )
-    const winningPermutations = generateWinLossPermutations(
-      futureGamesForTeam.length
-    ).filter(
-      (perm) =>
-        perm.replaceAll('W', '').length <=
-        Math.max(maxLosses - team.record.losses, 0)
-    )
+    const winningPermutations = permutations
+
     for (const winning of winningPermutations) {
       const contenderSimulations = futureGamesForTeam.map<SimulationGame>(
         (game, i) => ({
@@ -85,17 +162,25 @@ export const runSimulation = async (
     }
     teamSimulations = currSimulations
   }
-  const teamsToContend = [...currStandings.slice(0, numContenders)]
-  for (const contender of teamsToContend) {
-    addTeamSimulations({ team: contender, maxLosses })
+  for (const { school, permutations } of teamPermutations) {
+    addTeamSimulations({ team: school, permutations })
   }
   for (let i = 0; i < currStandings.length; i++) {
     const team = currStandings[i]
-    const isContender = teamsToContend.find(
-      (contender) => contender.id === team.id
+    const isContender = teamPermutations.find(
+      (contender) => contender.school.id === team.id
     )
     if (isContender) continue
-    addTeamSimulations({ team, maxLosses: 0, includeOppositeVariant: false })
+    addTeamSimulations({
+      team,
+      permutations: generateMaxWinLossPermutations({
+        school: team,
+        result: 'L',
+        numResult: 0,
+        futureGames,
+      }),
+      includeOppositeVariant: false,
+    })
   }
 
   const gameResults: BigXiiSchoolWithGames[][] = []
@@ -107,8 +192,20 @@ export const runSimulation = async (
     gameResults.push(standings)
   }
 
-  const byuInChampionshipFilter = (result: BigXiiSchoolWithGames[]) =>
-    result[0].id === teamHopeful || result[1].id === teamHopeful
+  return { gameResults, teamSimulations }
+}
+
+function logHopefulResults({
+  teamHopeful,
+  teamSimulations,
+  gameResults,
+  maxLosses,
+}: {
+  teamHopeful: number
+  gameResults: BigXiiSchoolWithGames[][]
+  teamSimulations: SimulationGame[][]
+  maxLosses: number
+}) {
   const byuNotInChampionshipFilter = (result: BigXiiSchoolWithGames[]) =>
     result[0].id !== 32 && result[1].id !== 32
   const getSimulationsForScenario = (result: BigXiiSchoolWithGames[]) =>
@@ -125,17 +222,7 @@ export const runSimulation = async (
       )
     )
 
-  const logStats = (results: BigXiiSchoolWithGames[][], loss?: number) => {
-    const byuResults = results.filter(byuInChampionshipFilter)
-    const percentage = (byuResults.length / results.length) * 100
-    console.log(
-      `Percentage of BYU making the Big 12 Championship${
-        loss !== undefined ? ` with ${loss} losses` : ''
-      }: ${byuResults.length}/${results.length}, ${percentage}%`
-    )
-  }
-
-  logStats(gameResults)
+  logStats(gameResults, teamHopeful)
   for (let loss = 0; loss <= maxLosses; loss++) {
     const results = gameResults.filter(
       (result) =>
@@ -143,7 +230,7 @@ export const runSimulation = async (
         loss
     )
 
-    logStats(results, loss)
+    logStats(results, teamHopeful, loss)
 
     const notInChampionshipResults = results.filter(byuNotInChampionshipFilter)
     if (
@@ -155,6 +242,22 @@ export const runSimulation = async (
       logResults(notInChampionshipResults)
     }
   }
+}
+
+function logStats(
+  results: BigXiiSchoolWithGames[][],
+  teamHopeful: number,
+  loss?: number
+) {
+  const byuInChampionshipFilter = (result: BigXiiSchoolWithGames[]) =>
+    result[0].id === teamHopeful || result[1].id === teamHopeful
+  const byuResults = results.filter(byuInChampionshipFilter)
+  const percentage = (byuResults.length / results.length) * 100
+  console.log(
+    `Percentage of BYU making the Big 12 Championship${
+      loss !== undefined ? ` with ${loss} losses` : ''
+    }: ${byuResults.length}/${results.length}, ${percentage}%`
+  )
 }
 
 function generateWinLossPermutations(length: number): string[] {
@@ -172,4 +275,29 @@ function generateWinLossPermutations(length: number): string[] {
   }
 
   return results
+}
+
+function generateMaxWinLossPermutations({
+  school,
+  futureGames,
+  result,
+  numResult,
+}: {
+  school: BigXiiSchoolWithGames
+  futureGames: BigXiiGameRaw[]
+  result: 'W' | 'L'
+  numResult: number
+}): string[] {
+  const futureGamesForTeam = futureGames.filter(
+    (game) => game.school.id === school.id || game.opponent.id === school.id
+  )
+  return generateWinLossPermutations(futureGamesForTeam.length).filter(
+    (perm) =>
+      perm.replaceAll(reverseResult(result), '').length <=
+      Math.max(
+        numResult -
+          (result === 'L' ? school.record.losses : school.record.wins),
+        0
+      )
+  )
 }
