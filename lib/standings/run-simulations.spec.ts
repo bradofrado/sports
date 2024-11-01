@@ -7,7 +7,7 @@ import {
 describe('run-simulations', () => {
   it('should run num contenders simulation', async () => {
     const byuId = 32
-    await runNumContendersSimulation(byuId, 6)
+    await runNumContendersSimulation(byuId, [0, 1, 2, 3, 4, 6])
     expect(true).toBeTruthy()
   })
 

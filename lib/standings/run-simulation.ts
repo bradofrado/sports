@@ -10,15 +10,16 @@ import { reverseResult } from './utils'
 export const runNumContendersSimulation = async (
   //BYU is coded as 32 for now
   teamHopeful: number,
-  numContenders: number
+  contenders: number[]
 ) => {
   const maxLosses = 2
   const games = await getGames()
   const futureGames = games.filter((game) => game.result === null)
   const currStandings = await getStandings(await getBigXiiSchools(games, []))
-
   const teamsToContend = [
-    ...currStandings.slice(0, numContenders),
+    // ...currStandings.slice(0, numContenders - 2),
+    // ...currStandings.slice(numContenders, numContenders + 2),
+    ...contenders.map((index) => currStandings[index]),
   ].map<TeamPermutations>((school) => ({
     school,
     permutations: generateMaxWinLossPermutations({
@@ -96,6 +97,8 @@ export const runSimulations = async (teamPermutations: TeamPermutations[]) => {
   const currStandings = await getStandings(await getBigXiiSchools(games, []))
 
   let teamSimulations: SimulationGame[][] = []
+  const toString = (sim: SimulationGame[]) =>
+    sim.map((s) => `${s.gameId}-${s.result}`).join(',')
   const addTeamSimulations = ({
     team,
     includeOppositeVariant = true,
@@ -106,6 +109,9 @@ export const runSimulations = async (teamPermutations: TeamPermutations[]) => {
     includeOppositeVariant?: boolean
   }) => {
     const currSimulations: SimulationGame[][] = []
+    const addToCurr = (simulations: SimulationGame[]) => {
+      currSimulations.push(simulations)
+    }
     const futureGamesForTeam = futureGames.filter(
       (game) => game.school.id === team.id || game.opponent.id === team.id
     )
@@ -136,28 +142,32 @@ export const runSimulations = async (teamPermutations: TeamPermutations[]) => {
           if (sameGames.length % 2 !== 0)
             throw new Error('Should be even array')
 
-          const firstHalf = sameGames.slice(0, sameGames.length / 2)
-          const secondHalf = sameGames.slice(sameGames.length / 2)
-          const first = curr.filter(
-            (c) => !secondHalf.find((f) => f.gameId === c.gameId)
-          )
-          first.push(...firstHalf)
-          const second = curr.filter(
-            (c) => !firstHalf.find((f) => f.gameId === c.gameId)
-          )
-          second.push(...secondHalf)
-          currSimulations.push(first)
-
-          //Sometimes we don't want to add the opposite variant in the case of a non contender because it just
-          //adds unnecessary simulations and slows down the time
-          if (includeOppositeVariant) currSimulations.push(second)
+          const grouped: SimulationGame[][] = Array.from({
+            length: sameGames.length / 2,
+          }).map(() => [])
+          for (let i = 0; i < sameGames.length; i++) {
+            //group same games together in their own arrays
+            const sameGame = sameGames[i]
+            const position = i % (sameGames.length / 2)
+            grouped[position].push(sameGame)
+          }
+          let sameGroupsPermutations = groupPermutations(grouped)
+          if (!includeOppositeVariant)
+            sameGroupsPermutations = [sameGroupsPermutations[0]]
+          for (const group of sameGroupsPermutations) {
+            const withoutGroup = curr.filter(
+              (c) => !group.find((g) => g.gameId === c.gameId)
+            )
+            withoutGroup.push(...group)
+            addToCurr(withoutGroup)
+          }
 
           continue
         }
-        currSimulations.push(curr)
+        addToCurr(curr)
       }
       if (teamSimulations.length === 0) {
-        currSimulations.push(contenderSimulations)
+        addToCurr(contenderSimulations)
       }
     }
     teamSimulations = currSimulations
@@ -184,6 +194,16 @@ export const runSimulations = async (teamPermutations: TeamPermutations[]) => {
   }
 
   const gameResults: BigXiiSchoolWithGames[][] = []
+
+  //Remove duplicate simulations
+  const tempSet = new Set<string>()
+  teamSimulations = teamSimulations.filter((simulation) => {
+    const str = toString(simulation)
+    if (tempSet.has(str)) return false
+    tempSet.add(str)
+    return true
+  })
+
   for (const group of teamSimulations) {
     const simulationsForGroup = group
     const standings = await getStandings(
@@ -233,12 +253,11 @@ function logHopefulResults({
     logStats(results, teamHopeful, loss)
 
     const notInChampionshipResults = results.filter(byuNotInChampionshipFilter)
-    if (
-      notInChampionshipResults.length <= 100 &&
-      notInChampionshipResults.length > 0
-    ) {
+    if (loss === 1) {
       //Log a scenario where BYU is not in the championship
-      console.log(getSimulationsForScenario(notInChampionshipResults[0]))
+      console.log(
+        JSON.stringify(getSimulationsForScenario(notInChampionshipResults[0]))
+      )
       logResults(notInChampionshipResults)
     }
   }
@@ -300,4 +319,32 @@ function generateMaxWinLossPermutations({
         0
       )
   )
+}
+
+function groupPermutations<T>(array: T[][]): T[][] {
+  const results: T[][] = []
+
+  // Recursive helper to generate each group permutation
+  function generateGroup(permutation: T[], rowIndex: number) {
+    // Base case: if we've set a value for each row, save this group permutation
+    if (rowIndex === array.length) {
+      results.push([...permutation]) // Convert each item to a nested array
+      return
+    }
+
+    // For each element in the current row, replace the default with that element
+    for (let colIndex = 0; colIndex < array[rowIndex].length; colIndex++) {
+      const original = permutation[rowIndex]
+      permutation[rowIndex] = array[rowIndex][colIndex]
+      generateGroup(permutation, rowIndex + 1)
+      permutation[rowIndex] = original // Restore original
+    }
+  }
+
+  // Initialize the permutation with the first element of each row
+  generateGroup(
+    array.map((row) => row[0]),
+    0
+  )
+  return results
 }
