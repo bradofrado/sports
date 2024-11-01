@@ -132,3 +132,7 @@ export const groupTiedTeams = (
 
   return groups
 }
+
+export const reverseResult = (result: 'W' | 'L'): 'W' | 'L' => {
+  return result === 'W' ? 'L' : 'W'
+}

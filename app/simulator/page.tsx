@@ -40,6 +40,10 @@ export default async function SimulatorPage({
       .parse(jsonSchema.optional().parse(searchParams?.simulations)) ?? []
   const teamId = z.coerce.number().optional().parse(searchParams?.drawer)
   const schools = await getStandings(simulations)
+  const futureGames = schools
+    .flatMap((school) => school.allGames)
+    .filter((game) => new Date(game.date) > new Date())
+    .map((game) => ({ gameId: game.id, result: game.result as 'W' | 'L' }))
 
   return (
     <CenterLayout>
@@ -68,7 +72,7 @@ export default async function SimulatorPage({
       <SimulateDrawer>
         <Suspense>
           {teamId ? (
-            <SimulateRecord teamId={teamId} simulations={simulations} />
+            <SimulateRecord teamId={teamId} simulations={futureGames} />
           ) : undefined}
         </Suspense>
       </SimulateDrawer>
