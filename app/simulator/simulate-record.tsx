@@ -1,12 +1,13 @@
-import { SimulationGame } from '@/lib/games-info'
+import { Conference, SimulationGame } from '@/lib/games-info'
 import { getTeam } from '../actions'
 import { SimulateOutcome } from './simulate-outcome'
 
 export const SimulateRecord: React.FunctionComponent<{
   teamId: number
   simulations: SimulationGame[]
-}> = async ({ teamId, simulations }) => {
-  const team = await getTeam(teamId, simulations)
+  conference: Conference
+}> = async ({ teamId, simulations, conference }) => {
+  const team = await getTeam(teamId, conference, simulations)
   if (!team) return null
 
   const games = Array.from(team.games.values()).sort((a, b) => {

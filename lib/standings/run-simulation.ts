@@ -13,7 +13,7 @@ export const runNumContendersSimulation = async (
   contenders: number[]
 ) => {
   const maxLosses = 2
-  const games = await getGames()
+  const games = await getGames('big-12')
   const futureGames = games.filter((game) => game.result === null)
   const currStandings = await getStandings(await getBigXiiSchools(games, []))
   const teamsToContend = [
@@ -29,13 +29,16 @@ export const runNumContendersSimulation = async (
       numResult: maxLosses,
     }),
   }))
-  const { gameResults, teamSimulations } = await runSimulations(teamsToContend)
+  const { gameResults, teamSimulations } = await runSimulations(
+    teamsToContend,
+    games
+  )
 
   logHopefulResults({ teamHopeful, gameResults, teamSimulations, maxLosses })
 }
 
 export const runBYU1LossScenario = async () => {
-  const games = await getGames()
+  const games = await getGames('big-12')
   const futureGames = games.filter((game) => game.result === null)
   const currStandings = await getStandings(await getBigXiiSchools(games, []))
 
@@ -83,7 +86,7 @@ export const runBYU1LossScenario = async () => {
       }),
     })),
   ]
-  const { gameResults } = await runSimulations(teamPermutations)
+  const { gameResults } = await runSimulations(teamPermutations, games)
   logStats(gameResults, 32)
 }
 
@@ -91,8 +94,10 @@ interface TeamPermutations {
   school: BigXiiSchoolWithGames
   permutations: string[]
 }
-export const runSimulations = async (teamPermutations: TeamPermutations[]) => {
-  const games = await getGames()
+export const runSimulations = async (
+  teamPermutations: TeamPermutations[],
+  games: BigXiiGameRaw[]
+) => {
   const futureGames = games.filter((game) => game.result === null)
   const currStandings = await getStandings(await getBigXiiSchools(games, []))
 

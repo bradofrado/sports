@@ -3,17 +3,24 @@ import {
   BigXiiGameRaw,
   BigXiiSchool,
   BigXiiSchoolWithGames,
+  Conference,
   SimulationGame,
 } from '../games-info'
 import { calculateRecord } from './utils'
 
-export const getGames = async (): Promise<BigXiiGameRaw[]> => {
-  const response = await fetch(
+const conferenceUrls: Record<Conference, string> = {
+  'big-12':
     'https://big12sports.com/services/responsive-calendar.ashx?start=08%2F29%2F2024&end=2024-11-30+23%3A59%3A59&sport_id=4&school_id=0',
-    {
-      next: { revalidate: 3600 },
-    }
-  )
+  acc: 'https://theacc.com/services/responsive-calendar.ashx?start=08%2F24%2F2024&end=2024-11-30+23%3A59%3A59&sport_id=3&school_id=0',
+}
+
+export const getGames = async (
+  conference: Conference
+): Promise<BigXiiGameRaw[]> => {
+  const url = conferenceUrls[conference]
+  const response = await fetch(url, {
+    next: { revalidate: 3600 },
+  })
   const data = await response.json()
 
   return data as BigXiiGameRaw[]

@@ -166,6 +166,23 @@ export interface SchoolRecord {
   losses: number
 }
 
+export const conferenceSchema = z.union([z.literal('big-12'), z.literal('acc')])
+export const conferences: {
+  title: string
+  name: z.infer<typeof conferenceSchema>
+}[] = [
+  {
+    name: 'big-12',
+    title: 'Big XII',
+  },
+  {
+    name: 'acc',
+    title: 'ACC',
+  },
+] as const
+
+export type Conference = (typeof conferences)[number]['name']
+
 export const simulationGameSchema = z.object({
   gameId: z.number(),
   result: z.union([z.literal('W'), z.literal('L')]),
