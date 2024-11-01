@@ -16,8 +16,8 @@ const geistMono = localFont({
 })
 
 export const metadata: Metadata = {
-  title: 'BYU Ticket Transfer',
-  description: 'Transfer your BYU tickets with ease',
+  title: 'BYU Sports',
+  description: 'Sports apps for BYU fanatics',
 }
 
 export default function RootLayout({
