@@ -15,10 +15,10 @@ export const runNumContendersSimulation = async (
   const maxLosses = 2
   const games = await getGames('big-12')
   const futureGames = games.filter((game) => game.result === null)
-  const currStandings = await getStandings(await getBigXiiSchools(games, []))
+  const currStandings = (
+    await getStandings(await getBigXiiSchools(games, []))
+  ).map(({ team }) => team)
   const teamsToContend = [
-    // ...currStandings.slice(0, numContenders - 2),
-    // ...currStandings.slice(numContenders, numContenders + 2),
     ...contenders.map((index) => currStandings[index]),
   ].map<TeamPermutations>((school) => ({
     school,
@@ -40,7 +40,9 @@ export const runNumContendersSimulation = async (
 export const runBYU1LossScenario = async () => {
   const games = await getGames('big-12')
   const futureGames = games.filter((game) => game.result === null)
-  const currStandings = await getStandings(await getBigXiiSchools(games, []))
+  const currStandings = (
+    await getStandings(await getBigXiiSchools(games, []))
+  ).map(({ team }) => team)
 
   const byu = currStandings.find((school) => school.title === 'BYU')
   const kansasSt = currStandings.find(
@@ -99,7 +101,9 @@ export const runSimulations = async (
   games: BigXiiGameRaw[]
 ) => {
   const futureGames = games.filter((game) => game.result === null)
-  const currStandings = await getStandings(await getBigXiiSchools(games, []))
+  const currStandings = (
+    await getStandings(await getBigXiiSchools(games, []))
+  ).map(({ team }) => team)
 
   let teamSimulations: SimulationGame[][] = []
   const toString = (sim: SimulationGame[]) =>
@@ -211,9 +215,9 @@ export const runSimulations = async (
 
   for (const group of teamSimulations) {
     const simulationsForGroup = group
-    const standings = await getStandings(
-      await getBigXiiSchools(games, simulationsForGroup)
-    )
+    const standings = (
+      await getStandings(await getBigXiiSchools(games, simulationsForGroup))
+    ).map(({ team }) => team)
     gameResults.push(standings)
   }
 

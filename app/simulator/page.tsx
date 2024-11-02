@@ -26,7 +26,7 @@ export default withSearchParams(
   async function SimulatorPage({ simulations, drawer: teamId, conference }) {
     const schools = await getStandings(conference, simulations)
     const futureGames = schools
-      .flatMap((school) => school.allGames)
+      .flatMap(({ team }) => team.allGames)
       .filter((game) => new Date(game.date) > new Date())
       .map((game) => ({ gameId: game.id, result: game.result as 'W' | 'L' }))
     const conferenceItem =
@@ -47,13 +47,14 @@ export default withSearchParams(
             <TableCaption>{conferenceItem.title} STANDINGS</TableCaption>
             <TableHeader>
               <TableRow>
+                {/* <TableHead></TableHead> */}
                 <TableHead>Team</TableHead>
                 <TableHead>Record</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {schools.map((school) => (
-                <TeamRow key={school.id} school={school} />
+                <TeamRow key={school.team.id} teamInfo={school} />
               ))}
             </TableBody>
           </Table>

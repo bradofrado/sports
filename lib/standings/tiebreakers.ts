@@ -7,34 +7,67 @@ import {
   TiebreakerGroup,
 } from './utils'
 
-export type Tiebreaker = (
+export type TiebreakerFunction = (
   a: BigXiiSchoolWithGames,
   b: BigXiiSchoolWithGames[],
   groups: TiebreakerGroup[]
-) => number
+) => { result: number; commonTeams?: BigXiiSchoolWithGames[] }
+
+export interface Tiebreaker {
+  func: TiebreakerFunction
+  title: string
+  ruleNumber: number
+  twoTeamDescription: string
+  multiTeamDescription: string
+}
+
+export interface AdvantageInfo {
+  results: {
+    team: BigXiiSchoolWithGames
+    result: ReturnType<TiebreakerFunction>
+  }[]
+  tiebreaker: Omit<Tiebreaker, 'func'>
+  type: 'two-team' | 'multi-team'
+}
 
 export const twoTeamTiebreaker =
   (groups: TiebreakerGroup[]) =>
-  (a: BigXiiSchoolWithGames, b: BigXiiSchoolWithGames): number => {
-    const tiebreakers: Tiebreaker[] = [
-      headToHeadTiebreaker,
-      winPercentageTiebreaker,
-      winPercentageAgainstTopTiebreaker,
-      combinedWinPercentageTiebreaker,
-      totalNumberOfWinsTiebreaker,
-      analyticRankingsTiebreaker,
-      coinTossTiebreaker,
-    ]
-
+  (
+    a: BigXiiSchoolWithGames,
+    b: BigXiiSchoolWithGames
+  ): { result: number; advantageInfo: AdvantageInfo } => {
     for (const tiebreaker of tiebreakers) {
-      const resultA = tiebreaker(a, [b], groups)
-      const resultB = tiebreaker(b, [a], groups)
-      if (resultA === -1 || resultB === -1 || resultA === resultB) continue
+      const resultA = tiebreaker.func(a, [b], groups)
+      const resultB = tiebreaker.func(b, [a], groups)
+      if (
+        resultA.result === -1 ||
+        resultB.result === -1 ||
+        resultA.result === resultB.result
+      )
+        continue
 
-      return resultB - resultA
+      const result = resultB.result - resultA.result
+      return {
+        result,
+        advantageInfo: {
+          results: [
+            { team: a, result: resultA },
+            { team: b, result: resultB },
+          ],
+          tiebreaker: {
+            ruleNumber: tiebreaker.ruleNumber,
+            title: tiebreaker.title,
+            twoTeamDescription: tiebreaker.twoTeamDescription,
+            multiTeamDescription: tiebreaker.multiTeamDescription,
+          },
+          type: 'two-team',
+        },
+      }
     }
 
-    return 0
+    //If we get here, then that means the coin toss tiebreaker did not determine a winner
+    //so retry the tiebreaker
+    return twoTeamTiebreaker(groups)(a, b)
   }
 
 /*
@@ -42,35 +75,26 @@ export const twoTeamTiebreaker =
   After one team has an advantage and is “seeded”, all remaining teams in the multipleteam tiebreaker will repeat the tie-breaking procedure. If at any point the multiple-team tie
   is reduced to two teams, the two-team tie-breaking procedure will be applied.
 */
+interface MultiTeamBreakerResult {
+  advantage: BigXiiSchoolWithGames
+  rest: BigXiiSchoolWithGames[]
+  advantageInfo: AdvantageInfo
+}
 export const multiTeamTiebreaker =
   (groups: TiebreakerGroup[]) =>
-  (
-    tiedTeams: BigXiiSchoolWithGames[]
-  ): {
-    advantage: BigXiiSchoolWithGames | undefined
-    rest: BigXiiSchoolWithGames[]
-  } => {
+  (tiedTeams: BigXiiSchoolWithGames[]): MultiTeamBreakerResult => {
     const getOthers = (team: BigXiiSchoolWithGames) => {
       return tiedTeams.filter((tiedTeam) => tiedTeam.id !== team.id)
     }
 
-    const tiebreakers: Tiebreaker[] = [
-      headToHeadTiebreaker,
-      winPercentageTiebreaker,
-      winPercentageAgainstTopTiebreaker,
-      combinedWinPercentageTiebreaker,
-      totalNumberOfWinsTiebreaker,
-      analyticRankingsTiebreaker,
-      coinTossTiebreaker,
-    ]
-
     const currTeams = tiedTeams.slice()
     for (const tiebreaker of tiebreakers) {
-      const results = currTeams.map((team) =>
-        tiebreaker(team, getOthers(team), groups)
+      const teamResults = currTeams.map((team) =>
+        tiebreaker.func(team, getOthers(team), groups)
       )
+      const results = teamResults.map((result) => result.result)
       if (results.includes(-1)) {
-        if (tiebreaker === headToHeadTiebreaker) {
+        if (tiebreaker.ruleNumber === 1) {
           const defeatOtherTeamsIndex = results.findIndex(
             (result) => result === 1
           )
@@ -79,6 +103,19 @@ export const multiTeamTiebreaker =
             return {
               advantage: defeatOtherTeams,
               rest: currTeams.filter((team) => team.id !== defeatOtherTeams.id),
+              advantageInfo: {
+                results: currTeams.map((team) => ({
+                  team,
+                  result: teamResults[currTeams.indexOf(team)],
+                })),
+                tiebreaker: {
+                  ruleNumber: tiebreaker.ruleNumber,
+                  title: tiebreaker.title,
+                  twoTeamDescription: tiebreaker.twoTeamDescription,
+                  multiTeamDescription: tiebreaker.multiTeamDescription,
+                },
+                type: 'multi-team',
+              },
             }
           }
         }
@@ -88,6 +125,7 @@ export const multiTeamTiebreaker =
             results[currTeams.indexOf(b)] - results[currTeams.indexOf(a)]
         )
         results.sort((a, b) => b - a)
+        teamResults.sort((a, b) => b.result - a.result)
 
         const newGroups = groupTiedTeams(currTeams, results)
         // If we get a lone winner at the top, that means we have an advantage team
@@ -96,29 +134,42 @@ export const multiTeamTiebreaker =
           return {
             advantage: newGroups[0].teams[0],
             rest: newGroups.slice(1).flatMap((group) => group.teams),
+            advantageInfo: {
+              results: currTeams.map((team) => ({
+                team,
+                result: teamResults[currTeams.indexOf(team)],
+              })),
+              tiebreaker: {
+                ruleNumber: tiebreaker.ruleNumber,
+                title: tiebreaker.title,
+                twoTeamDescription: tiebreaker.twoTeamDescription,
+                multiTeamDescription: tiebreaker.multiTeamDescription,
+              },
+              type: 'multi-team',
+            },
           }
       }
     }
 
     //If we get here, that means the coin toss tiebreaker did not determine a winner,
     //so let's just do it again, which will give us another coin toss scenario
-    return { rest: currTeams, advantage: undefined }
+    return multiTeamTiebreaker(groups)(tiedTeams)
   }
 
 /*
   a. Head-to-head competition among the two tied teams. 
 */
-export const headToHeadTiebreaker: Tiebreaker = (a, b) => {
+export const headToHeadTiebreaker: TiebreakerFunction = (a, b) => {
   const headToHeadResult = calculateWinPercentageAgainstTeams(a, b)
 
-  return headToHeadResult
+  return { result: headToHeadResult }
 }
 
 /*
   b. Win percentage against all common conference opponents among the tied
      teams. 
 */
-export const winPercentageTiebreaker: Tiebreaker = (a, b) => {
+export const winPercentageTiebreaker: TiebreakerFunction = (a, b) => {
   const aWinPercentage = commonGamesPercentage(a, b)
   //const bWinPercentage = commonGamesPercentage(b, [a])
 
@@ -133,7 +184,7 @@ export const winPercentageTiebreaker: Tiebreaker = (a, b) => {
      collective tied teams as a group (prior to that group’s own tie-breaking
      procedure) rather than the performance against individual tied teams.
  */
-export const winPercentageAgainstTopTiebreaker: Tiebreaker = (
+export const winPercentageAgainstTopTiebreaker: TiebreakerFunction = (
   a,
   b,
   tiedGroups
@@ -174,17 +225,17 @@ export const winPercentageAgainstTopTiebreaker: Tiebreaker = (
       continue
     }
 
-    return positionACommonWinPercentage
+    return { result: positionACommonWinPercentage, commonTeams: nextTeams }
   }
 
-  return -1
+  return { result: -1 }
 }
 
 /*
   d. Combined win percentage in conference games of conference opponents (i.e.,
      the strength of conference schedule).
 */
-export const combinedWinPercentageTiebreaker: Tiebreaker = (a) => {
+export const combinedWinPercentageTiebreaker: TiebreakerFunction = (a) => {
   const getOpponents = (
     school: BigXiiSchoolWithGames
   ): BigXiiSchoolWithGames[] => {
@@ -194,7 +245,6 @@ export const combinedWinPercentageTiebreaker: Tiebreaker = (a) => {
   }
 
   const aOpponents = getOpponents(a)
-  //const bOpponents = getOpponents(b)
 
   //Combined win percentage is the same as the average of each opponent's win percentage
   const aWinPercentage =
@@ -203,14 +253,8 @@ export const combinedWinPercentageTiebreaker: Tiebreaker = (a) => {
         calculateWinPercentage(opponent, Array.from(opponent.games.values()))
       )
       .reduce((acc, curr) => acc + curr, 0) / aOpponents.length
-  // const bWinPercentage =
-  //   bOpponents
-  //     .map((opponent) =>
-  //       calculateWinPercentage(opponent, Array.from(opponent.games.values()))
-  //     )
-  //     .reduce((acc, curr) => acc + curr, 0) / bOpponents.length
 
-  return aWinPercentage
+  return { result: aWinPercentage }
 }
 
 /*
@@ -221,23 +265,83 @@ export const combinedWinPercentageTiebreaker: Tiebreaker = (a) => {
      maximum number of football contests per NCAA rules. (Current Bylaw
      17.10.5.2.1) shall not be included.
 */
-export const totalNumberOfWinsTiebreaker: Tiebreaker = (a) => {
+export const totalNumberOfWinsTiebreaker: TiebreakerFunction = (a) => {
   //This assumes that each time has only played at most one FCS team
-  return a.overallRecord!.wins!
+  return { result: a.overallRecord!.wins! }
 }
 
 /*
   f. Highest ranking by SportSource Analytics (team Rating Score metric) following
      the last weekend of regular-season games.
 */
-export const analyticRankingsTiebreaker: Tiebreaker = () => {
-  return 0
+export const analyticRankingsTiebreaker: TiebreakerFunction = () => {
+  return { result: 0 }
 }
 
 /*
   g. Coin toss
 */
-export const coinTossTiebreaker: Tiebreaker = () => {
+export const coinTossTiebreaker: TiebreakerFunction = () => {
   //Randomly return 1 or -1
-  return Math.random() > 0.5 ? 1 : 0
+  return { result: Math.random() > 0.5 ? 1 : 0 }
 }
+
+const tiebreakers: Tiebreaker[] = [
+  {
+    func: headToHeadTiebreaker,
+    title: 'Head to Head',
+    ruleNumber: 1,
+    twoTeamDescription: 'Head-to-head competition among the two tied teams.',
+    multiTeamDescription: 'Head-to-head competition among the tied teams.',
+  },
+  {
+    func: winPercentageTiebreaker,
+    title: 'Win Percentage',
+    ruleNumber: 2,
+    twoTeamDescription:
+      'Win percentage against all common conference opponents among the tied teams.',
+    multiTeamDescription:
+      'Win percentage against all common conference opponents among the tied teams.',
+  },
+  {
+    func: winPercentageAgainstTopTiebreaker,
+    title: 'Win Percentage Against Top',
+    ruleNumber: 3,
+    twoTeamDescription:
+      'Win percentage against the next highest placed common opponent in the standings (based on the record in all games played within the Conference), proceeding through the standings. When arriving at another group of tied teams while comparing records, use each team’s win percentage against the collective tied teams as a group (prior to that group’s own tie-breaking procedure) rather than the performance against individual tied teams.',
+    multiTeamDescription:
+      'Record of the three (or more) tied teams against the next highest placed common opponent in the standings (based on the record in all games played within the conference), proceeding through the standings. When arriving at another group of tied teams while comparing records, use each team’s win percentage against the collective tied teams as a group (prior to that group’s own tie-breaking procedure) rather than the performance against individual tied teams.',
+  },
+  {
+    func: combinedWinPercentageTiebreaker,
+    title: 'Combined Win Percentage',
+    ruleNumber: 4,
+    twoTeamDescription:
+      'Combined win percentage in conference games of conference opponents (i.e., the strength of conference schedule).',
+    multiTeamDescription:
+      'Record of the three (or more) tied teams based on combined win percentage in conference games of conference opponents (i.e., strength of conference schedule)',
+  },
+  {
+    func: totalNumberOfWinsTiebreaker,
+    title: 'Total Number of Wins',
+    ruleNumber: 5,
+    twoTeamDescription: 'Total number of wins in a 12-game season',
+    multiTeamDescription: 'Total number of wins in a 12-game season',
+  },
+  {
+    func: analyticRankingsTiebreaker,
+    title: 'Analytic Rankings',
+    ruleNumber: 6,
+    twoTeamDescription:
+      'Highest ranking by SportSource Analytics (team Rating Score metric) following the last weekend of regular-season games.',
+    multiTeamDescription:
+      'Highest ranking by SportSource Analytics (team Rating Score metric) following the last weekend of regular-season games.',
+  },
+  {
+    func: coinTossTiebreaker,
+    title: 'Coin Toss',
+    ruleNumber: 7,
+    twoTeamDescription: '',
+    multiTeamDescription: '',
+  },
+]

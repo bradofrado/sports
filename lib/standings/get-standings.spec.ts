@@ -167,6 +167,9 @@ describe('get-standings', () => {
     })
 
     const sorted = getStandings([school1, school2, school3, school4])
-    expectStanding(sorted, '[Kansas St., BYU, Colorado, Iowa St.]')
+    expectStanding(
+      sorted.map(({ team }) => team),
+      '[Kansas St., BYU, Colorado, Iowa St.]'
+    )
   })
 })

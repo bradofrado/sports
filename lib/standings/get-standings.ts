@@ -1,12 +1,22 @@
 import { BigXiiSchoolWithGames } from '../games-info'
-import { multiTeamTiebreaker, twoTeamTiebreaker } from './tiebreakers'
+import {
+  AdvantageInfo,
+  multiTeamTiebreaker,
+  twoTeamTiebreaker,
+} from './tiebreakers'
 import { groupTiedTeams, sortRecordPercentage, TiebreakerGroup } from './utils'
 
-export const getStandings = (
-  schools: BigXiiSchoolWithGames[]
-): BigXiiSchoolWithGames[] => {
+export interface TeamInfo {
+  team: BigXiiSchoolWithGames
+  advantageInfo?: AdvantageInfo
+}
+export const getStandings = (schools: BigXiiSchoolWithGames[]): TeamInfo[] => {
   let recordSorted = schools.slice().sort(sortRecordPercentage)
   const tiedTeams = groupTiedTeams(recordSorted)
+  const teamsAdvantageInfo = recordSorted.map((team) => ({
+    team,
+    advantageInfo: undefined,
+  }))
 
   for (let i = 0; i < tiedTeams.length; i++) {
     let group = tiedTeams[i]
@@ -17,21 +27,25 @@ export const getStandings = (
 
     // Sort the two team groups
     if (group.teams.length === 2) {
-      group.teams.sort(twoTeamBreaker)
+      const { result, advantageInfo } = twoTeamBreaker(
+        group.teams[0],
+        group.teams[1]
+      )
+      group.teams.sort((a, b) => {
+        if (a === group.teams[0] && b === group.teams[1]) return result
+
+        return -result
+      })
+      setAdvantageInfo(group.teams[0], teamsAdvantageInfo, advantageInfo)
     } else {
       // The multi team tie breaker goes until we get an advantage team
       // when this happens, we redo the tie breaker with the rest of the teams
-      const { advantage, rest } = multiTeamBreaker(group.teams)
+      const { advantage, rest, advantageInfo } = multiTeamBreaker(group.teams)
 
-      if (advantage) {
-        tiedTeams[i] = { teams: [advantage, ...rest], index: group.index }
-        group = tiedTeams[i]
-        tiedTeams.splice(i + 1, 0, { teams: rest, index: group.index + 1 })
-      } else {
-        //Continue until we have an advantage team (the coin toss plays out)
-        i--
-        continue
-      }
+      tiedTeams[i] = { teams: [advantage, ...rest], index: group.index }
+      group = tiedTeams[i]
+      tiedTeams.splice(i + 1, 0, { teams: rest, index: group.index + 1 })
+      setAdvantageInfo(advantage, teamsAdvantageInfo, advantageInfo)
     }
 
     recordSorted = reinsertTiedGroup(group, recordSorted)
@@ -44,7 +58,25 @@ export const getStandings = (
     }
   }
 
-  return recordSorted
+  return recordSorted.map((team) => {
+    const info = teamsAdvantageInfo.find(
+      (teamInfo) => teamInfo.team.id === team.id
+    )
+    if (!info) throw new Error('Team info not found')
+    return info
+  })
+}
+
+const setAdvantageInfo = (
+  advantageTeam: BigXiiSchoolWithGames,
+  teamsAdvantageInfo: TeamInfo[],
+  advantageInfo: AdvantageInfo
+) => {
+  teamsAdvantageInfo.forEach((teamInfo) => {
+    if (teamInfo.team.id === advantageTeam.id) {
+      teamInfo.advantageInfo = advantageInfo
+    }
+  })
 }
 
 const reinsertTiedGroup = (

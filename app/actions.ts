@@ -25,7 +25,7 @@ export const downloadTicket: typeof downloadTicketServer = async (...props) => {
 export const getStandings = async (
   conference: Conference,
   simulations: SimulationGame[]
-): Promise<BigXiiSchoolWithGames[]> => {
+): Promise<ReturnType<typeof getStandingsRaw>> => {
   const schools = await getBigXiiSchools(
     await getGames(conference),
     simulations

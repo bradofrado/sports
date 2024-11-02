@@ -71,22 +71,28 @@ export const getSchoolGames = (
 export const commonGamesPercentage = (
   a: BigXiiSchoolWithGames,
   b: BigXiiSchoolWithGames[]
-): number => {
-  const commonGamesA = Array.from(a.games.entries())
+): { result: number; commonTeams?: BigXiiSchoolWithGames[] } => {
+  const commonTeamGamesA = Array.from(a.games.entries())
     .filter(
       ([opponentId, game]) =>
         b.every((g) => g.games?.has(opponentId)) &&
         game.result &&
         b.every((g) => g.games.get(opponentId)?.result)
     )
-    .map(([, game]) => game)
+    .map(([, game]) => {
+      const team = a.id === game.school.id ? game.opponent : game.school
 
-  if (commonGamesA.length === 0) {
-    return -1 //No common games
+      return { team, game }
+    })
+
+  if (commonTeamGamesA.length === 0) {
+    return { result: -1 } //No common games
   }
+  const commonGamesA = commonTeamGamesA.map(({ game }) => game)
+  const commonTeamsA = commonTeamGamesA.map(({ team }) => team)
 
   const aWinPercentage = calculateWinPercentage(a, commonGamesA)
-  return aWinPercentage
+  return { result: aWinPercentage, commonTeams: commonTeamsA }
 }
 
 export const sortRecordPercentage = (

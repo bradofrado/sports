@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   combinedWinPercentageTiebreaker,
   headToHeadTiebreaker,
-  Tiebreaker,
+  TiebreakerFunction,
   winPercentageTiebreaker,
 } from './tiebreakers'
 import { BigXiiGame, BigXiiSchoolWithGames } from '../games-info'
@@ -11,14 +11,15 @@ import { groupTiedTeams } from './utils'
 describe('tiebreakers', () => {
   const expectStanding = (
     schools: BigXiiSchoolWithGames[],
-    tiebreaker: Tiebreaker,
+    tiebreaker: TiebreakerFunction,
     expected: string
   ) => {
     const getOthers = (team: BigXiiSchoolWithGames) =>
       schools.filter((t) => t.id !== team.id)
 
-    const results = schools.map((school) =>
-      tiebreaker(school, getOthers(school), groupTiedTeams(schools))
+    const results = schools.map(
+      (school) =>
+        tiebreaker(school, getOthers(school), groupTiedTeams(schools)).result
     )
     const sorted = schools
       .slice()
