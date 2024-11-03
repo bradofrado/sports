@@ -12,26 +12,21 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { BigXiiSchoolWithGames } from '@/lib/games-info'
+import { useQueryState } from '@/hooks/query-state'
 import { TeamInfo } from '@/lib/standings/get-standings'
 import { AdvantageInfo } from '@/lib/standings/tiebreakers'
 import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline'
-import { useRouter } from 'next/navigation'
 
 export const TeamRow: React.FunctionComponent<{
   teamInfo: TeamInfo
 }> = ({ teamInfo: { team: school, advantageInfo } }) => {
-  const router = useRouter()
-  const onTeamClick = (team: BigXiiSchoolWithGames) => {
-    const url = new URL(window.location.href)
-    url.searchParams.set('drawer', String(team.id))
-    router.push(url.toString())
-  }
+  const [, setTeamId] = useQueryState<number | undefined>({ key: 'drawer' })
+
   return (
     <TableRow
       className='hover:cursor-pointer'
       key={school.id}
-      onClick={() => onTeamClick(school)}
+      onClick={() => setTeamId(school.id)}
     >
       {/* <TableCell>
         
@@ -55,6 +50,8 @@ export const TeamRow: React.FunctionComponent<{
 export const AdvantageInfoPopover: React.FunctionComponent<{
   info: AdvantageInfo
 }> = ({ info }) => {
+  const [, setTeamId] = useQueryState<number | undefined>({ key: 'drawer' })
+
   const commonTeams = new Set<string>(
     info.results
       .flatMap(({ result }) => result.commonTeams?.map((team) => team.title))
@@ -93,7 +90,13 @@ export const AdvantageInfoPopover: React.FunctionComponent<{
           </TableHeader>
           <TableBody>
             {results.map(({ team, result: { result } }) => (
-              <TableRow key={team.id}>
+              <TableRow
+                key={team.id}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setTeamId(team.id)
+                }}
+              >
                 <TableCell>{team.title}</TableCell>
                 <TableCell>
                   {result === -1 ? 'N/A' : Math.round(result * 100) / 100}
