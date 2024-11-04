@@ -6,6 +6,7 @@ import {
   groupTiedTeams,
   TiebreakerGroup,
 } from './utils'
+import { close } from './utils'
 
 export type TiebreakerFunction = (
   a: BigXiiSchoolWithGames,
@@ -42,7 +43,8 @@ export const twoTeamTiebreaker =
       if (
         resultA.result === -1 ||
         resultB.result === -1 ||
-        resultA.result === resultB.result
+        close(resultA.result, resultB.result)
+        //resultA.result === resultB.result
       )
         continue
 

@@ -125,7 +125,7 @@ export const groupTiedTeams = (
     const school = schools[i]
     const prevSchool = schools[i - 1]
 
-    if (prevSchool && relativeRecord[i] !== relativeRecord[i - 1]) {
+    if (prevSchool && !close(relativeRecord[i], relativeRecord[i - 1])) {
       groups.push({ teams: currGroup, index: currIndex })
       currGroup = []
       currIndex = i
@@ -141,4 +141,8 @@ export const groupTiedTeams = (
 
 export const reverseResult = (result: 'W' | 'L'): 'W' | 'L' => {
   return result === 'W' ? 'L' : 'W'
+}
+
+export function close(a: number, b: number): boolean {
+  return Math.round(Math.abs(a - b) * 1000000000000000) / 1000000000000000 === 0
 }
