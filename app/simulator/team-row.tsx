@@ -99,7 +99,7 @@ export const AdvantageInfoPopover: React.FunctionComponent<{
               >
                 <TableCell>{team.title}</TableCell>
                 <TableCell>
-                  {result === -1 ? 'N/A' : Math.round(result * 100) / 100}
+                  {result === -1 ? 'N/A' : `${Math.round(result * 1000) / 10}%`}
                 </TableCell>
               </TableRow>
             ))}
