@@ -54,6 +54,26 @@ export const sports: SportInfo[] = [
         gameId: 'E01',
         name: 'Colorado Christian',
       },
+      {
+        seasonId: 'B24',
+        gameId: 'E02',
+        name: 'UC Riverside',
+      },
+      {
+        seasonId: 'B24',
+        gameId: 'E03',
+        name: 'Queens',
+      },
+      {
+        seasonId: 'B24',
+        gameId: 'E04',
+        name: 'Idaho',
+      },
+      {
+        seasonId: 'B24',
+        gameId: 'E05',
+        name: 'Mississippi State',
+      },
     ],
   },
 ]
