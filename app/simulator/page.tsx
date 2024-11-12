@@ -2,7 +2,6 @@ import {
   Table,
   TableBody,
   TableCaption,
-  TableCell,
   TableHead,
   TableHeader,
   TableRow,
@@ -15,19 +14,21 @@ import { z } from 'zod'
 import { Suspense } from 'react'
 import { SimulateRecord } from './simulate-record'
 import {
-  Conference,
   conferences,
   conferenceSchema,
-  SimulationGame,
   simulationGameSchema,
 } from '@/lib/games-info'
 import { Button } from '@/components/ui/button'
 import { withSearchParams } from '@/lib/search-params/search-param-hoc'
 import { createJsonSchema } from '@/lib/search-params/utils'
-import { Skeleton } from '@/components/ui/skeleton'
 
 export default withSearchParams(
-  function SimulatorPage({ simulations, drawer: teamId, conference }) {
+  async function SimulatorPage({ simulations, drawer: teamId, conference }) {
+    const schools = await getStandings(conference, simulations)
+    const futureGames = schools
+      .flatMap(({ team }) => team.allGames)
+      .filter((game) => new Date(game.date) > new Date())
+      .map((game) => ({ gameId: game.id, result: game.result as 'W' | 'L' }))
     const conferenceItem =
       conferences.find((c) => c.name === conference) ?? conferences[0]
 
@@ -52,36 +53,21 @@ export default withSearchParams(
               </TableRow>
             </TableHeader>
             <TableBody>
-              <Suspense
-                key={JSON.stringify({ simulations, conference, teamId })}
-                fallback={
-                  <TableRow>
-                    <TableCell colSpan={2} className='space-y-4'>
-                      <Skeleton className='h-8 w-full' />
-                      <Skeleton className='h-8 w-full' />
-                      <Skeleton className='h-8 w-full' />
-                    </TableCell>
-                  </TableRow>
-                }
-              >
-                <StandingsList
-                  key={JSON.stringify({ simulations, conference })}
-                  conference={conference}
-                  simulations={simulations}
-                />
-              </Suspense>
+              {schools.map((school) => (
+                <TeamRow key={school.team.id} teamInfo={school} />
+              ))}
             </TableBody>
           </Table>
         </div>
         <SimulateDrawer>
-          <Suspense key={JSON.stringify({ simulations, conference, teamId })}>
+          <Suspense>
             {teamId ? (
               <SimulateRecord
                 teamId={teamId}
-                simulations={simulations}
+                simulations={futureGames}
                 conference={conference}
               />
-            ) : null}
+            ) : undefined}
           </Suspense>
         </SimulateDrawer>
       </CenterLayout>
@@ -95,20 +81,3 @@ export default withSearchParams(
     conference: conferenceSchema.optional().default('big-12'),
   }
 )
-
-async function StandingsList({
-  conference,
-  simulations,
-}: {
-  conference: Conference
-  simulations: SimulationGame[]
-}) {
-  const schools = await getStandings(conference, simulations)
-  return (
-    <>
-      {schools.map((school) => (
-        <TeamRow key={school.team.id} teamInfo={school} />
-      ))}
-    </>
-  )
-}
