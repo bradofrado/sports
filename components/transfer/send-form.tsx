@@ -32,6 +32,7 @@ export const SendForm: React.FunctionComponent<{
     defaultValue: '',
   })
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
   const [selectedSport, setSelectedSport] = useQueryState<string | null>({
     key: 'sport',
     defaultValue: null,
@@ -46,12 +47,15 @@ export const SendForm: React.FunctionComponent<{
   const onSend = async () => {
     if (!token || !selectedGame) return
     try {
+      setLoading(true)
       const code = await generateReceiveCode(token, selectedGame)
       setSendCode(code)
     } catch (err) {
       console.error(err)
       setSendCode('')
       setError(String(err))
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -161,7 +165,11 @@ export const SendForm: React.FunctionComponent<{
         </CardContent>
       ) : null}
       <CardFooter>
-        <Button onClick={onSend} disabled={!token || !selectedGame}>
+        <Button
+          onClick={onSend}
+          disabled={!token || !selectedGame}
+          loading={loading}
+        >
           Generate Code
         </Button>
       </CardFooter>
