@@ -10,7 +10,7 @@ import { getBigXiiSchools, getGames } from '@/lib/standings/get-teams'
 import {
   generateReceiveCode as generateReceiveCodeServer,
   downloadTicket as downloadTicketServer,
-} from '@/server/receive-code'
+} from '@/lib/tickets/receive-code'
 
 export const generateReceiveCode: typeof generateReceiveCodeServer = async (
   ...props
