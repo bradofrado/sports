@@ -154,9 +154,13 @@ export function close(a: number, b: number): boolean {
 }
 
 export const getStartAndEndDates = (
-  year?: number
+  startingDate?: Date
 ): { start: string; end: string } => {
-  year = year ?? new Date().getFullYear();
+  const date = startingDate ?? new Date();
+
+  // Start and End date reset in August
+  date.setMonth(date.getMonth() - 7);
+  const year = date.getFullYear();
 
   // Find last Saturday in August
   const august = new Date(year, 7, 24); // August is month 7 (zero-based)

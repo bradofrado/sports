@@ -1,34 +1,34 @@
-import { BigXiiSchoolWithGames } from '../games-info'
+import { BigXiiSchoolWithGames } from '../games-info';
 import {
   commonGamesPercentage,
   calculateWinPercentage,
   calculateWinPercentageAgainstTeams,
   groupTiedTeams,
   TiebreakerGroup,
-} from './utils'
-import { close } from './utils'
+} from './utils';
+import { close } from './utils';
 
 export type TiebreakerFunction = (
   a: BigXiiSchoolWithGames,
   b: BigXiiSchoolWithGames[],
   groups: TiebreakerGroup[]
-) => { result: number; commonTeams?: BigXiiSchoolWithGames[] }
+) => { result: number; commonTeams?: BigXiiSchoolWithGames[] };
 
 export interface Tiebreaker {
-  func: TiebreakerFunction
-  title: string
-  ruleNumber: number
-  twoTeamDescription: string
-  multiTeamDescription: string
+  func: TiebreakerFunction;
+  title: string;
+  ruleNumber: number;
+  twoTeamDescription: string;
+  multiTeamDescription: string;
 }
 
 export interface AdvantageInfo {
   results: {
-    team: BigXiiSchoolWithGames
-    result: ReturnType<TiebreakerFunction>
-  }[]
-  tiebreaker: Omit<Tiebreaker, 'func'>
-  type: 'two-team' | 'multi-team'
+    team: BigXiiSchoolWithGames;
+    result: ReturnType<TiebreakerFunction>;
+  }[];
+  tiebreaker: Omit<Tiebreaker, 'func'>;
+  type: 'two-team' | 'multi-team';
 }
 
 export const twoTeamTiebreaker =
@@ -38,17 +38,16 @@ export const twoTeamTiebreaker =
     b: BigXiiSchoolWithGames
   ): { result: number; advantageInfo: AdvantageInfo } => {
     for (const tiebreaker of tiebreakers) {
-      const resultA = tiebreaker.func(a, [b], groups)
-      const resultB = tiebreaker.func(b, [a], groups)
+      const resultA = tiebreaker.func(a, [b], groups);
+      const resultB = tiebreaker.func(b, [a], groups);
       if (
         resultA.result === -1 ||
         resultB.result === -1 ||
         close(resultA.result, resultB.result)
-        //resultA.result === resultB.result
       )
-        continue
+        continue;
 
-      const result = resultB.result - resultA.result
+      const result = resultB.result - resultA.result;
       return {
         result,
         advantageInfo: {
@@ -64,13 +63,13 @@ export const twoTeamTiebreaker =
           },
           type: 'two-team',
         },
-      }
+      };
     }
 
     //If we get here, then that means the coin toss tiebreaker did not determine a winner
     //so retry the tiebreaker
-    return twoTeamTiebreaker(groups)(a, b)
-  }
+    return twoTeamTiebreaker(groups)(a, b);
+  };
 
 /*
   In the event of a tie between more than two teams, the following procedures will be used.
@@ -78,30 +77,30 @@ export const twoTeamTiebreaker =
   is reduced to two teams, the two-team tie-breaking procedure will be applied.
 */
 interface MultiTeamBreakerResult {
-  advantage: BigXiiSchoolWithGames
-  rest: BigXiiSchoolWithGames[]
-  advantageInfo: AdvantageInfo
+  advantage: BigXiiSchoolWithGames;
+  rest: BigXiiSchoolWithGames[];
+  advantageInfo: AdvantageInfo;
 }
 export const multiTeamTiebreaker =
   (groups: TiebreakerGroup[]) =>
   (tiedTeams: BigXiiSchoolWithGames[]): MultiTeamBreakerResult => {
     const getOthers = (team: BigXiiSchoolWithGames) => {
-      return tiedTeams.filter((tiedTeam) => tiedTeam.id !== team.id)
-    }
+      return tiedTeams.filter((tiedTeam) => tiedTeam.id !== team.id);
+    };
 
-    const currTeams = tiedTeams.slice()
+    const currTeams = tiedTeams.slice();
     for (const tiebreaker of tiebreakers) {
       const teamResults = currTeams.map((team) =>
         tiebreaker.func(team, getOthers(team), groups)
-      )
-      const results = teamResults.map((result) => result.result)
+      );
+      const results = teamResults.map((result) => result.result);
       if (results.includes(-1)) {
         if (tiebreaker.ruleNumber === 1) {
           const defeatOtherTeamsIndex = results.findIndex(
             (result) => result === 1
-          )
+          );
           if (defeatOtherTeamsIndex !== -1) {
-            const defeatOtherTeams = currTeams[defeatOtherTeamsIndex]
+            const defeatOtherTeams = currTeams[defeatOtherTeamsIndex];
             return {
               advantage: defeatOtherTeams,
               rest: currTeams.filter((team) => team.id !== defeatOtherTeams.id),
@@ -118,18 +117,18 @@ export const multiTeamTiebreaker =
                 },
                 type: 'multi-team',
               },
-            }
+            };
           }
         }
       } else {
         currTeams.sort(
           (a, b) =>
             results[currTeams.indexOf(b)] - results[currTeams.indexOf(a)]
-        )
-        results.sort((a, b) => b - a)
-        teamResults.sort((a, b) => b.result - a.result)
+        );
+        results.sort((a, b) => b - a);
+        teamResults.sort((a, b) => b.result - a.result);
 
-        const newGroups = groupTiedTeams(currTeams, results)
+        const newGroups = groupTiedTeams(currTeams, results);
         // If we get a lone winner at the top, that means we have an advantage team
         //and can return the rest of the teams
         if (newGroups.length > 1 && newGroups[0].teams.length === 1)
@@ -149,34 +148,33 @@ export const multiTeamTiebreaker =
               },
               type: 'multi-team',
             },
-          }
+          };
       }
     }
 
     //If we get here, that means the coin toss tiebreaker did not determine a winner,
     //so let's just do it again, which will give us another coin toss scenario
-    return multiTeamTiebreaker(groups)(tiedTeams)
-  }
+    return multiTeamTiebreaker(groups)(tiedTeams);
+  };
 
 /*
   a. Head-to-head competition among the two tied teams. 
 */
 export const headToHeadTiebreaker: TiebreakerFunction = (a, b) => {
-  const headToHeadResult = calculateWinPercentageAgainstTeams(a, b)
+  const headToHeadResult = calculateWinPercentageAgainstTeams(a, b);
 
-  return { result: headToHeadResult }
-}
+  return { result: headToHeadResult };
+};
 
 /*
   b. Win percentage against all common conference opponents among the tied
      teams. 
 */
 export const winPercentageTiebreaker: TiebreakerFunction = (a, b) => {
-  const aWinPercentage = commonGamesPercentage(a, b)
-  //const bWinPercentage = commonGamesPercentage(b, [a])
+  const aWinPercentage = commonGamesPercentage(a, b);
 
-  return aWinPercentage
-}
+  return aWinPercentage;
+};
 
 /*
   c. Win percentage against the next highest placed common opponent in the
@@ -191,47 +189,47 @@ export const winPercentageAgainstTopTiebreaker: TiebreakerFunction = (
   b,
   tiedGroups
 ) => {
-  const schools = tiedGroups.flatMap((group) => group.teams)
+  const schools = tiedGroups.flatMap((group) => group.teams);
 
-  const positionA = schools.findIndex((school) => school.id === a.id)
+  const positionA = schools.findIndex((school) => school.id === a.id);
   const positionBs = b.map((b) =>
     schools.findIndex((school) => school.id === b.id)
-  )
-  let currIndex = 0
+  );
+  let currIndex = 0;
 
   while (currIndex < schools.length) {
     if (currIndex === positionA || positionBs.includes(currIndex)) {
-      currIndex++
-      continue
+      currIndex++;
+      continue;
     }
     // Compare records against tied teams as a group
     const nextTeams = tiedGroups.find(
       (group) =>
         currIndex >= group.index && currIndex < group.index + group.teams.length
-    )?.teams ?? [schools[currIndex]]
-    currIndex += nextTeams.length
+    )?.teams ?? [schools[currIndex]];
+    currIndex += nextTeams.length;
 
     const positionACommonWinPercentage = calculateWinPercentageAgainstTeams(
       a,
       nextTeams
-    )
+    );
     const positionBCommonWinPercentages = b.map((b) =>
       calculateWinPercentageAgainstTeams(b, nextTeams)
-    )
+    );
 
     //Must be common opponents
     if (
       positionACommonWinPercentage === -1 ||
       positionBCommonWinPercentages.includes(-1)
     ) {
-      continue
+      continue;
     }
 
-    return { result: positionACommonWinPercentage, commonTeams: nextTeams }
+    return { result: positionACommonWinPercentage, commonTeams: nextTeams };
   }
 
-  return { result: -1 }
-}
+  return { result: -1 };
+};
 
 /*
   d. Combined win percentage in conference games of conference opponents (i.e.,
@@ -242,11 +240,11 @@ export const combinedWinPercentageTiebreaker: TiebreakerFunction = (a) => {
     school: BigXiiSchoolWithGames
   ): BigXiiSchoolWithGames[] => {
     return Array.from(school.games.values()).map((game) => {
-      return game.opponent.id === school.id ? game.school : game.opponent
-    })
-  }
+      return game.opponent.id === school.id ? game.school : game.opponent;
+    });
+  };
 
-  const aOpponents = getOpponents(a)
+  const aOpponents = getOpponents(a);
 
   //Combined win percentage is the same as the average of each opponent's win percentage
   const aWinPercentage =
@@ -254,10 +252,10 @@ export const combinedWinPercentageTiebreaker: TiebreakerFunction = (a) => {
       .map((opponent) =>
         calculateWinPercentage(opponent, Array.from(opponent.games.values()))
       )
-      .reduce((acc, curr) => acc + curr, 0) / aOpponents.length
+      .reduce((acc, curr) => acc + curr, 0) / aOpponents.length;
 
-  return { result: aWinPercentage }
-}
+  return { result: aWinPercentage };
+};
 
 /*
   e. Total number of wins in a 12-game season. The following conditions will apply
@@ -269,24 +267,24 @@ export const combinedWinPercentageTiebreaker: TiebreakerFunction = (a) => {
 */
 export const totalNumberOfWinsTiebreaker: TiebreakerFunction = (a) => {
   //This assumes that each time has only played at most one FCS team
-  return { result: a.overallRecord!.wins! }
-}
+  return { result: a.overallRecord.wins };
+};
 
 /*
   f. Highest ranking by SportSource Analytics (team Rating Score metric) following
      the last weekend of regular-season games.
 */
 export const analyticRankingsTiebreaker: TiebreakerFunction = () => {
-  return { result: 0 }
-}
+  return { result: 0 };
+};
 
 /*
   g. Coin toss
 */
 export const coinTossTiebreaker: TiebreakerFunction = () => {
   //Randomly return 1 or -1
-  return { result: Math.random() > 0.5 ? 1 : 0 }
-}
+  return { result: Math.random() > 0.5 ? 1 : 0 };
+};
 
 const tiebreakers: Tiebreaker[] = [
   {
@@ -346,4 +344,4 @@ const tiebreakers: Tiebreaker[] = [
     twoTeamDescription: '',
     multiTeamDescription: '',
   },
-]
+];
