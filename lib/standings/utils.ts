@@ -54,7 +54,11 @@ export const calculateWinPercentageAgainstTeams = (
   opponents: BigXiiSchoolWithGames[]
 ): number => {
   const commonGames = opponents.map((opponent) => team.games.get(opponent.id));
-  if (commonGames.includes(undefined)) return -1;
+  if (
+    commonGames.includes(undefined) ||
+    commonGames.some((game) => !game?.result)
+  )
+    return -1;
 
   return calculateWinPercentage(team, commonGames as BigXiiGame[]);
 };

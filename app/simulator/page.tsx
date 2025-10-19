@@ -5,42 +5,44 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
-import { getStandings } from '../actions'
-import { CenterLayout } from '../center-layout'
-import { TeamRow } from './team-row'
-import { SimulateDrawer } from './simulate-drawer'
-import { z } from 'zod'
-import { Suspense } from 'react'
-import { SimulateRecord } from './simulate-record'
+} from '@/components/ui/table';
+import { getStandings } from '../actions';
+import { CenterLayout } from '../center-layout';
+import { TeamRow } from './team-row';
+import { SimulateDrawer } from './simulate-drawer';
+import { z } from 'zod';
+import { Suspense } from 'react';
+import { SimulateRecord } from './simulate-record';
 import {
   conferences,
   conferenceSchema,
   simulationGameSchema,
-} from '@/lib/games-info'
-import { Button } from '@/components/ui/button'
-import { withSearchParams } from '@/lib/search-params/search-param-hoc'
-import { createJsonSchema } from '@/lib/search-params/utils'
+} from '@/lib/games-info';
+import { Button } from '@/components/ui/button';
+import { withSearchParams } from '@/lib/search-params/search-param-hoc';
+import { createJsonSchema } from '@/lib/search-params/utils';
+import { tiebreakers } from '@/lib/standings/tiebreakers';
+import { TiebreakerRules } from './tiebreaker-rules';
 
 export default withSearchParams(
   async function SimulatorPage({ simulations, drawer: teamId, conference }) {
-    const schools = await getStandings(conference, simulations)
+    const schools = await getStandings(conference, simulations);
     const futureGames = schools
       .flatMap(({ team }) => team.allGames)
       .filter((game) => new Date(game.date) > new Date())
-      .map((game) => ({ gameId: game.id, result: game.result as 'W' | 'L' }))
+      .map((game) => ({ gameId: game.id, result: game.result as 'W' | 'L' }));
     const conferenceItem =
-      conferences.find((c) => c.name === conference) ?? conferences[0]
+      conferences.find((c) => c.name === conference) ?? conferences[0];
 
     return (
       <CenterLayout>
-        <div className='w-full max-w-2xl'>
-          <h1 className='text-center text-4xl'>
+        <div className="w-full max-w-2xl">
+          <h1 className="text-center text-4xl">
             {conferenceItem.title} Simulator
           </h1>
           {simulations.length > 0 ? (
             <Button>
-              <a href='/simulator'>Reset</a>
+              <a href="/simulator">Reset</a>
             </Button>
           ) : null}
           <Table>
@@ -58,6 +60,12 @@ export default withSearchParams(
               ))}
             </TableBody>
           </Table>
+          <TiebreakerRules
+            tiebreakers={tiebreakers.map((tiebreaker) => ({
+              ...tiebreaker,
+              func: undefined,
+            }))}
+          />
         </div>
         <SimulateDrawer>
           <Suspense>
@@ -71,7 +79,7 @@ export default withSearchParams(
           </Suspense>
         </SimulateDrawer>
       </CenterLayout>
-    )
+    );
   },
   {
     drawer: z.coerce.number().optional(),
@@ -80,4 +88,4 @@ export default withSearchParams(
     ),
     conference: conferenceSchema.optional().default('big-12'),
   }
-)
+);

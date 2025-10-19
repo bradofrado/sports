@@ -31,24 +31,24 @@ export interface AdvantageInfo {
   type: 'two-team' | 'multi-team';
 }
 
+export interface AdvantageResult {
+  result: number;
+  advantageInfo: AdvantageInfo;
+}
+
 export const twoTeamTiebreaker =
   (groups: TiebreakerGroup[]) =>
   (
     a: BigXiiSchoolWithGames,
     b: BigXiiSchoolWithGames
-  ): { result: number; advantageInfo: AdvantageInfo } => {
+  ): AdvantageResult & { allResults: AdvantageResult[] } => {
+    const allResults: AdvantageResult[] = [];
     for (const tiebreaker of tiebreakers) {
       const resultA = tiebreaker.func(a, [b], groups);
       const resultB = tiebreaker.func(b, [a], groups);
-      if (
-        resultA.result === -1 ||
-        resultB.result === -1 ||
-        close(resultA.result, resultB.result)
-      )
-        continue;
 
       const result = resultB.result - resultA.result;
-      return {
+      const advantageResult: AdvantageResult = {
         result,
         advantageInfo: {
           results: [
@@ -64,6 +64,16 @@ export const twoTeamTiebreaker =
           type: 'two-team',
         },
       };
+      allResults.push(advantageResult);
+
+      if (
+        resultA.result === -1 ||
+        resultB.result === -1 ||
+        close(resultA.result, resultB.result)
+      )
+        continue;
+
+      return { ...advantageResult, allResults };
     }
 
     //If we get here, then that means the coin toss tiebreaker did not determine a winner
@@ -83,7 +93,10 @@ interface MultiTeamBreakerResult {
 }
 export const multiTeamTiebreaker =
   (groups: TiebreakerGroup[]) =>
-  (tiedTeams: BigXiiSchoolWithGames[]): MultiTeamBreakerResult => {
+  (
+    tiedTeams: BigXiiSchoolWithGames[]
+  ): MultiTeamBreakerResult & { allResults: MultiTeamBreakerResult[] } => {
+    const allResults: MultiTeamBreakerResult[] = [];
     const getOthers = (team: BigXiiSchoolWithGames) => {
       return tiedTeams.filter((tiedTeam) => tiedTeam.id !== team.id);
     };
@@ -101,7 +114,7 @@ export const multiTeamTiebreaker =
           );
           if (defeatOtherTeamsIndex !== -1) {
             const defeatOtherTeams = currTeams[defeatOtherTeamsIndex];
-            return {
+            const advantageResult: MultiTeamBreakerResult = {
               advantage: defeatOtherTeams,
               rest: currTeams.filter((team) => team.id !== defeatOtherTeams.id),
               advantageInfo: {
@@ -118,8 +131,28 @@ export const multiTeamTiebreaker =
                 type: 'multi-team',
               },
             };
+            allResults.push(advantageResult);
+            return { ...advantageResult, allResults };
           }
         }
+        const advantageResult: MultiTeamBreakerResult = {
+          advantage: currTeams[0], // N/A because this tiebreaker did not determine a winner
+          rest: currTeams.slice(1), // N/A because this tiebreaker did not determine a winner
+          advantageInfo: {
+            results: currTeams.map((team) => ({
+              team,
+              result: teamResults[currTeams.indexOf(team)],
+            })),
+            tiebreaker: {
+              ruleNumber: tiebreaker.ruleNumber,
+              title: tiebreaker.title,
+              twoTeamDescription: tiebreaker.twoTeamDescription,
+              multiTeamDescription: tiebreaker.multiTeamDescription,
+            },
+            type: 'multi-team',
+          },
+        };
+        allResults.push(advantageResult);
       } else {
         currTeams.sort(
           (a, b) =>
@@ -129,26 +162,28 @@ export const multiTeamTiebreaker =
         teamResults.sort((a, b) => b.result - a.result);
 
         const newGroups = groupTiedTeams(currTeams, results);
+        const advantageResult: MultiTeamBreakerResult = {
+          advantage: newGroups[0].teams[0],
+          rest: newGroups.slice(1).flatMap((group) => group.teams),
+          advantageInfo: {
+            results: currTeams.map((team) => ({
+              team,
+              result: teamResults[currTeams.indexOf(team)],
+            })),
+            tiebreaker: {
+              ruleNumber: tiebreaker.ruleNumber,
+              title: tiebreaker.title,
+              twoTeamDescription: tiebreaker.twoTeamDescription,
+              multiTeamDescription: tiebreaker.multiTeamDescription,
+            },
+            type: 'multi-team',
+          },
+        };
+        allResults.push(advantageResult);
         // If we get a lone winner at the top, that means we have an advantage team
         //and can return the rest of the teams
         if (newGroups.length > 1 && newGroups[0].teams.length === 1)
-          return {
-            advantage: newGroups[0].teams[0],
-            rest: newGroups.slice(1).flatMap((group) => group.teams),
-            advantageInfo: {
-              results: currTeams.map((team) => ({
-                team,
-                result: teamResults[currTeams.indexOf(team)],
-              })),
-              tiebreaker: {
-                ruleNumber: tiebreaker.ruleNumber,
-                title: tiebreaker.title,
-                twoTeamDescription: tiebreaker.twoTeamDescription,
-                multiTeamDescription: tiebreaker.multiTeamDescription,
-              },
-              type: 'multi-team',
-            },
-          };
+          return { ...advantageResult, allResults };
       }
     }
 
@@ -286,13 +321,22 @@ export const coinTossTiebreaker: TiebreakerFunction = () => {
   return { result: Math.random() > 0.5 ? 1 : 0 };
 };
 
-const tiebreakers: Tiebreaker[] = [
+export const tiebreakers: Tiebreaker[] = [
   {
     func: headToHeadTiebreaker,
     title: 'Head to Head',
     ruleNumber: 1,
     twoTeamDescription: 'Head-to-head competition among the two tied teams.',
-    multiTeamDescription: 'Head-to-head competition among the tied teams.',
+    multiTeamDescription: `The records of the three (or more) tied teams will be compared based on
+winning percentage in games among the tied teams:
+1. If all teams involved in the tie did not play each other, but one team
+defeated all other teams involved in the tie, the team that defeated all
+other teams in the tie is removed from the tiebreaker, and the remaining
+teams revert to the beginning of the applicable tiebreaker process (i.e.,
+two team or three or more team tie).
+2. If all teams involved in the tie did not play each other and no team
+defeated all other teams involved in the tie, move to the next step in
+tiebreaker.`,
   },
   {
     func: winPercentageTiebreaker,
@@ -300,8 +344,9 @@ const tiebreakers: Tiebreaker[] = [
     ruleNumber: 2,
     twoTeamDescription:
       'Win percentage against all common conference opponents among the tied teams.',
-    multiTeamDescription:
-      'Win percentage against all common conference opponents among the tied teams.',
+    multiTeamDescription: `The records of the three (or more) tied teams will be compared based on
+winning percentage against all common conference opponents played by all
+other teams involved in the tie.`,
   },
   {
     func: winPercentageAgainstTopTiebreaker,

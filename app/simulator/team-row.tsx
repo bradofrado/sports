@@ -1,9 +1,9 @@
-'use client'
+'use client';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@/components/ui/popover'
+} from '@/components/ui/popover';
 import {
   Table,
   TableBody,
@@ -11,31 +11,33 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
-import { useQueryState } from '@/hooks/query-state'
-import { TeamInfo } from '@/lib/standings/get-standings'
-import { AdvantageInfo } from '@/lib/standings/tiebreakers'
-import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline'
+} from '@/components/ui/table';
+import { Toggle } from '@/components/ui/toggle';
+import { useQueryState } from '@/hooks/query-state';
+import { TeamInfo } from '@/lib/standings/get-standings';
+import { AdvantageInfo } from '@/lib/standings/tiebreakers';
+import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
+import { useState } from 'react';
 
 export const TeamRow: React.FunctionComponent<{
-  teamInfo: TeamInfo
+  teamInfo: TeamInfo;
 }> = ({ teamInfo: { team: school, advantageInfo } }) => {
-  const [, setTeamId] = useQueryState<number | undefined>({ key: 'drawer' })
+  const [, setTeamId] = useQueryState<number | undefined>({ key: 'drawer' });
 
   return (
     <TableRow
-      className='hover:cursor-pointer'
+      className="hover:cursor-pointer"
       key={school.id}
       onClick={() => setTeamId(school.id)}
     >
       {/* <TableCell>
         
       </TableCell> */}
-      <TableCell className='flex items-center gap-1'>
-        {advantageInfo ? (
-          <AdvantageInfoPopover info={advantageInfo} />
+      <TableCell className="flex items-center gap-1">
+        {advantageInfo.length > 0 ? (
+          <AdvantageInfoPopover infos={advantageInfo} key={school.id} />
         ) : (
-          <div className='mr-4' />
+          <div className="mr-4" />
         )}
         {school.title}
       </TableCell>
@@ -44,33 +46,54 @@ export const TeamRow: React.FunctionComponent<{
         {school.record.wins}-{school.record.losses})
       </TableCell>
     </TableRow>
-  )
-}
+  );
+};
 
 export const AdvantageInfoPopover: React.FunctionComponent<{
-  info: AdvantageInfo
-}> = ({ info }) => {
-  const [, setTeamId] = useQueryState<number | undefined>({ key: 'drawer' })
+  infos: AdvantageInfo[];
+}> = ({ infos }) => {
+  const [, setTeamId] = useQueryState<number | undefined>({ key: 'drawer' });
+  const [info, setInfo] = useState<AdvantageInfo>(infos[infos.length - 1]);
 
   const commonTeams = new Set<string>(
     info.results
       .flatMap(({ result }) => result.commonTeams?.map((team) => team.title))
       .filter(Boolean) as string[]
-  )
+  );
   const results = info.results
     .slice()
-    .sort((a, b) => b.result.result - a.result.result)
+    .sort((a, b) => b.result.result - a.result.result);
   return (
     <Popover>
-      <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
-        <QuestionMarkCircleIcon className='h-4 w-4' />
+      <PopoverTrigger
+        asChild
+        onClick={(e) => {
+          e.stopPropagation();
+        }}
+      >
+        <QuestionMarkCircleIcon className="h-4 w-4" />
       </PopoverTrigger>
-      <PopoverContent>
-        <h1 className='text-lg font-semibold text-center'>
+      <PopoverContent onClick={(e) => e.stopPropagation()}>
+        <h1 className="text-lg font-semibold text-center">
           Tiebreaker Scenario
         </h1>
+        {infos.length > 1 ? (
+          <div>
+            {infos.map((currInfo) => (
+              <Toggle
+                key={currInfo.tiebreaker.ruleNumber}
+                pressed={
+                  currInfo.tiebreaker.ruleNumber === info.tiebreaker.ruleNumber
+                }
+                onPressedChange={() => setInfo(currInfo)}
+              >
+                {currInfo.tiebreaker.ruleNumber}
+              </Toggle>
+            ))}
+          </div>
+        ) : null}
         {info.tiebreaker.ruleNumber}. {info.tiebreaker.title}
-        <p className='text-xs'>
+        <p className="text-xs">
           {info.type === 'two-team'
             ? info.tiebreaker.twoTeamDescription
             : info.tiebreaker.multiTeamDescription}
@@ -78,7 +101,7 @@ export const AdvantageInfoPopover: React.FunctionComponent<{
         {commonTeams.size > 0 ? (
           <p>
             Common Teams:{' '}
-            <span className='text-sm'>
+            <span className="text-sm">
               {Array.from(commonTeams.values()).join(', ')}
             </span>
           </p>
@@ -93,13 +116,17 @@ export const AdvantageInfoPopover: React.FunctionComponent<{
               <TableRow
                 key={team.id}
                 onClick={(e) => {
-                  e.stopPropagation()
-                  setTeamId(team.id)
+                  e.stopPropagation();
+                  setTeamId(team.id);
                 }}
               >
                 <TableCell>{team.title}</TableCell>
                 <TableCell>
-                  {result === -1 ? 'N/A' : `${Math.round(result * 1000) / 10}%`}
+                  {result === -1
+                    ? 'N/A'
+                    : result <= 1
+                    ? `${Math.round(result * 1000) / 10}%`
+                    : result}
                 </TableCell>
               </TableRow>
             ))}
@@ -107,5 +134,5 @@ export const AdvantageInfoPopover: React.FunctionComponent<{
         </Table>
       </PopoverContent>
     </Popover>
-  )
-}
+  );
+};
